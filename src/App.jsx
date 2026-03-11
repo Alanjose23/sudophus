@@ -28,7 +28,7 @@ function App() {
           Click this button to add a journal entry
         </p>
       </div>
-      <Journal entryc = {count}/>
+     
     </>
     ): ( <><Journal entryC = {count}/>
     <button onClick = {() => setEntry(false)}>Go Back</button></>
