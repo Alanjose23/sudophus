@@ -6,6 +6,7 @@ import './App.css'
 function App() {
   const [count, setCount] = useState(0)
   const [entry, setEntry] = useState(false)
+  const [project, setProject] = useState(0)
 
 
   const handleClick = () => {
@@ -30,8 +31,11 @@ function App() {
         </p>
       </div>
       <div className = "card">
-        <button>add to PROJECTBASE</button>
+        <button onClick = {() => {
+          setProject(project + 1);
+        }}>add to PROJECTBASE</button>
       </div>
+      <div textAlign = "center">Current amount of project entries: {(project)}</div>
      
     </>
     ): ( <><Journal entryC = {count}/>
