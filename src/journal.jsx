@@ -1,13 +1,18 @@
-import React from 'react';
 
-function Journal ({count}) {
+import "./journal.css"
+
+function Journal ({entryC}) {
     return (
         <div style = {{textAlign:  'center'}}>
-            <h2>Journal entry</h2>
-                <p>Journal entries go here</p>
+            <h2>Journal entry: #{entryC}</h2>
+                <label>
 
+                <textarea className = "entries" rows={10} cols={55}></textarea>
 
-            <p>You have {count} journal entries, keep going</p>
+                </label>
+            <p>You have {entryC} journal entries, keep going</p>
+            <button style = {{backgroundColor: "grey"}}>Save Entry</button>
+
         </div>
     )
 }

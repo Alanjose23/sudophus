@@ -28,10 +28,15 @@ function App() {
           Click this button to add a journal entry
         </p>
       </div>
+      <div className = "card">
+        <button>add to PROJECTBASE</button>
+      </div>
      
     </>
     ): ( <><Journal entryC = {count}/>
-    <button onClick = {() => setEntry(false)}>Go Back</button></>
+    <button onClick = {() => {setEntry(false) 
+    setCount(count-1)}}>Go Back</button></>
+    
   )}
     </div>
   )
