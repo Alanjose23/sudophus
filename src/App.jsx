@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import Journal from './journal'
+
 import './App.css'
 
 function App() {
