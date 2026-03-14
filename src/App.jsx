@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import Journal from './journal'
+import Loginscreen from './login'
 
 import './App.css'
 
@@ -34,6 +35,11 @@ function App() {
         <button onClick = {() => {
           setProject(project + 1);
         }}>add to PROJECTBASE</button>
+      </div>
+      <div className = "card">
+        <button onClick = {() => {
+          //login screen code here
+        }}>Login</button>
       </div>
       <div textAlign = "center">Current amount of project entries: {(project)}</div>
      

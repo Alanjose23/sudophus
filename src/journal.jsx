@@ -2,7 +2,7 @@ import { useState } from 'react';
 import "./journal.css"
 import { db } from "./firebase";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
-import Loginscreen from './login';
+
 
 
 function Journal ({entryC}) {
