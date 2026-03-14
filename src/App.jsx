@@ -5,26 +5,57 @@ import Loginscreen from './login'
 import './App.css'
 
 function App() {
+  var [screen, setScreen] = useState("home")
   var [count, setCount] = useState(0)
-  var [entry, setEntry] = useState(false)
-  var [project, setProject] = useState(0)
+ 
 
 
-  const handleClick = () => {
+  const journalClick = () => {
     setCount(count + 1)
-    setEntry(true)
+    setScreen("journal")
   }
-  return (
+  const loginClick = () => {
+    setScreen("login")
+  }
+  const backClick = () => {
+    if(screen == "login") {
+      setCount(count * 0)
+    }
+    
+    setScreen("home")
+    
+  }
+
+  switch(screen) {
+
+    case "journal":
+    return (
+        <div>
+      
+      <Journal entryC = {count}/>
+    <button onClick = {backClick} >Go Back</button>
+    </div>
+    )
+
+    case "login": 
+      return (
+        <div>
+          <Loginscreen/>
+          <button onClick = {backClick}>Go Back</button>
+        </div>
+      )
+
+
+  default: return (
     <div className = "container">
-      {!entry ? ( 
-    <>
+    
       <div style  = {{ textAlign: 'center'}}>
         <img src="../public/sudo.jpg" class = "rounded corners" alt="climb the mountain" />
       <h1>Sudophus</h1>
       <h4>Welcome to Sudophus,a simple React Journaling Application which documents progress of your coding journey and helps maintain your mental health</h4>
       </div>
       <div className="card">
-        <button onClick={handleClick}>
+        <button onClick={journalClick}>
           log entries {count}
         </button>
         <p>
@@ -32,26 +63,18 @@ function App() {
         </p>
       </div>
       <div className = "card">
-        <button onClick = {() => {
-          setProject(project + 1);
-        }}>add to PROJECTBASE</button>
+        <button>Projects</button>
       </div>
       <div className = "card">
-        <button onClick = {() => {
-          //login screen code here
-        }}>Login</button>
+        <button onClick = {loginClick}>Login</button>
       </div>
-      <div textAlign = "center">Current amount of project entries: {(project)}</div>
-     
-    </>
-    ): ( <><Journal entryC = {count}/>
-    <button onClick = {() => {setEntry(false) 
-    setCount(count-1)}}>Go Back</button></>
+      <div textAlign = "center">Current amount of project entries: </div>
+  </div> )}
+   
+  
     
-  )}
-    </div>
-  )
-}
+      }
+
 
 export default App
 
