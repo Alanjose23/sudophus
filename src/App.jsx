@@ -20,7 +20,7 @@ function App() {
       <div style  = {{ textAlign: 'center'}}>
         <img src="../public/sudo.jpg" class = "rounded corners" alt="climb the mountain" />
       <h1>Sudophus</h1>
-      <h4>Welcome to Sudophus,a simple React Journaling Application which documents progress of your coding journey</h4>
+      <h4>Welcome to Sudophus,a simple React Journaling Application which documents progress of your coding journey and helps maintain your mental health</h4>
       </div>
       <div className="card">
         <button onClick={handleClick}>
