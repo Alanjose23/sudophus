@@ -4,9 +4,9 @@ import Journal from './journal'
 import './App.css'
 
 function App() {
-  const [count, setCount] = useState(0)
-  const [entry, setEntry] = useState(false)
-  const [project, setProject] = useState(0)
+  var [count, setCount] = useState(0)
+  var [entry, setEntry] = useState(false)
+  var [project, setProject] = useState(0)
 
 
   const handleClick = () => {

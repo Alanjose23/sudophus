@@ -14,13 +14,13 @@ function Loginscreen() {
             <div style = {{textAlign: "center"}}>
                 <h2>User Profile Creation</h2>
                     <ul>
-                        <textarea> UserName</textarea>
+                        <textarea value = {t2}> UserName</textarea>
                     </ul>
                     <ul>
-                        <textarea> password</textarea>
+                        <textarea value = {t3}> password</textarea>
                     </ul>
                     <ul>
-                        <textarea> email</textarea>
+                        <textarea value = {t4}> email</textarea>
                     </ul>
                 <button>signup</button>
             </div>
