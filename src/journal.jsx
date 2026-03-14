@@ -1,11 +1,26 @@
 import { useState } from 'react';
 import "./journal.css"
+import { db } from "./firebase";
+import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 
 
 function Journal ({entryC}) {
 
-        const [entries,setEntries] = useState([]);
-        const [text, setText] = useState("");
+        var [entries,setEntries] = useState([]);
+        var [text, setText] = useState("");
+
+        const addEntry = async(text) => {
+            try {
+                const docred = await addDoc(collection(db, "entries"), {
+                    text: text,
+                    createdAt: serverTimestamp
+
+                });
+            } catch(error) {
+                console.log(error);
+            }
+        }
+    
     
     return (
         <div style = {{textAlign:  'center'}}>
@@ -19,12 +34,14 @@ function Journal ({entryC}) {
             
             <button style = {{backgroundColor: "grey"}} 
             // button for saving entries and creation of id for a number 
-            // onClick {() => 
-            //     {
-                   
+            onClick = { () => 
+                {
+                   addEntry(text);
+                   setEntries([...entries,{ text, id: entryC}]);
+                   setText("");
 
-            //     }
-            // }
+                }
+            }
             >Save Entry</button>
            
 
