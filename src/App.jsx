@@ -7,6 +7,7 @@ import './App.css'
 function App() {
   var [screen, setScreen] = useState("home")
   var [count, setCount] = useState(0)
+  var [user, setUser] = useState(false)
  
 
 
