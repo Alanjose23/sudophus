@@ -14,9 +14,11 @@ function Journal ({entryC}) {
             try {
                 const docred = await addDoc(collection(db, "entries"), {
                     text: text,
-                    createdAt: serverTimestamp
+                    createdAt: serverTimestamp()
 
                 });
+                console.log("Document written with ID:", docred.id);
+                return docred.id;
             } catch(error) {
                 console.log(error);
             }
