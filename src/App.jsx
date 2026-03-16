@@ -5,9 +5,9 @@ import Loginscreen from './login'
 import './App.css'
 
 function App() {
-  var [screen, setScreen] = useState("home")
-  var [count, setCount] = useState(0)
-  var [user, setUser] = useState(false)
+  let [screen, setScreen] = useState("home")
+  let [count, setCount] = useState(0)
+  let [user, setUser] = useState(false)
  
 
 
@@ -50,7 +50,7 @@ function App() {
   default: return (
     <div className = "container">
     
-      <div style  = {{ textAlign: 'center'}}>
+      <div style  = {{ textalign: 'center'}}>
         <img src="../public/sudo.jpg" class = "rounded corners" alt="climb the mountain" />
       <h1>Sudophus</h1>
       <h4>Welcome to Sudophus,a simple React Journaling Application which documents progress of your coding journey and helps maintain your mental health</h4>
@@ -69,7 +69,7 @@ function App() {
       <div className = "card">
         <button onClick = {loginClick}>Login</button>
       </div>
-      <div textAlign = "center">Current amount of project entries: </div>
+      <div textalign = "center">Current amount of project entries: </div>
   </div> )}
    
   

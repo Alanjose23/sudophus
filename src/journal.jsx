@@ -7,8 +7,8 @@ import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 
 function Journal ({entryC}) {
 
-        var [entries,setEntries] = useState([]);
-        var [text, setText] = useState("");
+        let [entries,setEntries] = useState([]);
+        let [text, setText] = useState("");
 
         const addEntry = async(text) => {
             try {
@@ -26,7 +26,7 @@ function Journal ({entryC}) {
     
     
     return (
-        <div style = {{textAlign:  'center'}}>
+        <div style = {{textalign:  'center'}}>
             <h2>Journal entry: #{entryC}</h2>
                 <label>
 
