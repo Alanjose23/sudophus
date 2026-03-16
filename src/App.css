@@ -37,6 +37,10 @@
   padding: 2em;
 }
 
+img {
+border-radius: 150px;  
+}
+
 .read-the-docs {
   color: #888;
 }

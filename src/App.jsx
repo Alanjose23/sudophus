@@ -51,7 +51,7 @@ function App() {
     <div className = "container">
     
       <div style  = {{ textalign: 'center'}}>
-        <img src="../public/sudo.jpg" class = "rounded corners" alt="climb the mountain" />
+        <img src="../public/sudo.jpg" alt="climb the mountain" />
       <h1>Sudophus</h1>
       <h4>Welcome to Sudophus,a simple React Journaling Application which documents progress of your coding journey and helps maintain your mental health</h4>
       </div>
