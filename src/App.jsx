@@ -9,7 +9,7 @@ function App() {
   let [screen, setScreen] = useState("home")
   let [count, setCount] = useState(0)
   let [user, setUser] = useState(false)
-  let [pcount,setPcount] = useState(0)
+  
   
  
 
@@ -66,21 +66,23 @@ function App() {
       <div style  = {{ textalign: 'center'}}>
         <img src="../public/sudo.jpg" alt="climb the mountain" />
       <h1>Sudophus</h1>
-      <h4>Welcome to Sudophus,a simple React Journaling Application which documents progress of your coding journey and helps maintain your mental health</h4>
+      <h4>A Journaling Application which documents progress of your coding journey and helps maintain your mental health.</h4>
       </div>
       <div className="card">
         <button onClick={journalClick}>
           log entries {count}
         </button>
         <p>
-          Click this button to add a journal entry
+          Add a new page in your life
         </p>
       </div>
       <div className = "card">
         <button onClick = {projectclick}>Projects</button>
+        <p>Create something unique</p>
       </div>
       <div className = "card">
         <button onClick = {loginClick}>Login</button>
+        <p>Start tracking your journey</p>
       </div>
       <div textalign = "center">Current amount of project entries: </div>
   </div> )}
