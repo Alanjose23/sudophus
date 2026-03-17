@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import Journal from './journal'
 import Loginscreen from './login'
+import Project from './project'
 
 import './App.css'
 
@@ -8,6 +9,8 @@ function App() {
   let [screen, setScreen] = useState("home")
   let [count, setCount] = useState(0)
   let [user, setUser] = useState(false)
+  let [pcount,setPcount] = useState(0)
+  
  
 
 
@@ -25,6 +28,9 @@ function App() {
     
     setScreen("home")
     
+  }
+  const projectclick = () => {
+    setScreen("project")
   }
 
   switch(screen) {
@@ -45,6 +51,13 @@ function App() {
           <button onClick = {backClick}>Go Back</button>
         </div>
       )
+    case "project": 
+      return (
+        <div>
+          <Project/>
+          <button onClick = {backClick}>Go Back</button>
+        </div>
+      )  
 
 
   default: return (
@@ -64,7 +77,7 @@ function App() {
         </p>
       </div>
       <div className = "card">
-        <button>Projects</button>
+        <button onClick = {projectclick}>Projects</button>
       </div>
       <div className = "card">
         <button onClick = {loginClick}>Login</button>
