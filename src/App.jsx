@@ -2,6 +2,7 @@ import { useState } from 'react'
 import Journal from './journal'
 import Loginscreen from './login'
 import Project from './project'
+import quotes from './quotes'
 
 import './App.css'
 
@@ -9,11 +10,16 @@ function App() {
   let [screen, setScreen] = useState("home")
   let [count, setCount] = useState(0)
   let [user, setUser] = useState(false)
+  let [quote, setQuotes] = useState("")
   
   
  
 
-
+  const quoteChange = () => {
+    let x = Math.random() * (100 - 0) + 0
+    console.log(quotes[Math.round(x)])
+    
+  }
   const journalClick = () => {
     setCount(count + 1)
     setScreen("journal")
@@ -67,6 +73,8 @@ function App() {
         <img src="../public/sudo.jpg" alt="climb the mountain" />
       <h1>Sudophus</h1>
       <h4>A Journaling Application which documents progress of your coding journey and helps maintain your mental health.</h4>
+      <h6><i>QUOTES ELEMENT</i></h6>
+      <button onClick = {quoteChange}>Change quote</button>
       </div>
       <div className="card">
         <button onClick={journalClick}>
