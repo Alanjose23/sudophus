@@ -12,9 +12,7 @@ function App() {
   let [user, setUser] = useState(false)
   let [quote, setQuotes] = useState("")
   
-  
- 
-
+  //next steps, setup databases and user routing, and start designing for other features, as well as learning the css for the website
   const quoteChange = () => {
     let x = Math.random() * (100 - 0) + 0
      setQuotes(quotes[Math.round(x)])
@@ -24,8 +22,12 @@ function App() {
   },[])
   // to explore useEffect, implemented
   const journalClick = () => {
+    if(!user)(
+      alert("Please sign in to account to access this feature")
+    )
     setCount(count + 1)
     setScreen("journal")
+    
   }
   const loginClick = () => {
     setScreen("login")
@@ -39,19 +41,33 @@ function App() {
     
   }
   const projectclick = () => {
+    if(!user)(
+      alert("Please sign in to account to access this feature")
+    )
     setScreen("project")
   }
 
   switch(screen) {
 
     case "journal":
+      if(!user){
+        return(
+          <div>
+          <Loginscreen/>
+          <button onClick = {backClick}>Go Back</button>
+        </div>
+        )
+
+      }
+      
+
+      else {
     return (
         <div>
-      
       <Journal entryC = {count}/>
     <button onClick = {backClick} >Go Back</button>
     </div>
-    )
+    )}
 
     case "login": 
       return (
@@ -61,6 +77,15 @@ function App() {
         </div>
       )
     case "project": 
+    if(!user){
+      return (
+        <div>
+          <Loginscreen/>
+          <button onClick = {backClick}>Go Back</button>
+        </div>
+      )
+    }
+    else
       return (
         <div>
           <Project/>
