@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Journal from './journal'
 import Loginscreen from './login'
 import Project from './project'
@@ -17,9 +17,12 @@ function App() {
 
   const quoteChange = () => {
     let x = Math.random() * (100 - 0) + 0
-    console.log(quotes[Math.round(x)])
-    
+     setQuotes(quotes[Math.round(x)])
   }
+  useEffect(() => {
+    quoteChange();
+  },[])
+  // to explore useEffect, implemented
   const journalClick = () => {
     setCount(count + 1)
     setScreen("journal")
@@ -73,8 +76,8 @@ function App() {
         <img src="../public/sudo.jpg" alt="climb the mountain" />
       <h1>Sudophus</h1>
       <h4>A Journaling Application which documents progress of your coding journey and helps maintain your mental health.</h4>
-      <h6><i>QUOTES ELEMENT</i></h6>
-      <button onClick = {quoteChange}>Change quote</button>
+      <h6><i>{quote}</i></h6>
+      <button onClick = {quoteChange}>Change Quote</button>
       </div>
       <div className="card">
         <button onClick={journalClick}>
