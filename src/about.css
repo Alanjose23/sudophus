@@ -1,0 +1,157 @@
+/* ── Page entrance ─────────────────────── */
+@keyframes about-page-enter {
+  from { opacity: 0; transform: translateY(28px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0)    scale(1);    }
+}
+
+.about-page {
+  animation: about-page-enter 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* ── Layout ────────────────────────────── */
+.about-container {
+  max-width: 700px;
+  margin: 0 auto;
+  padding: 2.5rem 2rem 4rem;
+}
+
+/* ── Hero block ────────────────────────── */
+@keyframes about-img-enter {
+  from { opacity: 0; transform: scale(0.75) rotate(-4deg); }
+  to   { opacity: 1; transform: scale(1)    rotate(0deg);  }
+}
+
+.about-hero {
+  text-align: center;
+  margin-bottom: 3.5rem;
+}
+
+.about-img {
+  width: 100px;
+  height: 100px;
+  object-fit: cover;
+  border-radius: 50%;
+  border: 3px solid #6366f1;
+  display: block;
+  margin: 0 auto 1.25rem;
+  animation: about-img-enter 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.1s both;
+}
+
+.about-title {
+  font-size: 2.5rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, #6366f1, #a78bfa);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin: 0 0 0.4rem;
+  animation: about-page-enter 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.15s both;
+}
+
+.about-tagline {
+  color: #64748b;
+  font-size: 1rem;
+  font-style: italic;
+  margin: 0;
+  animation: about-page-enter 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.2s both;
+}
+
+/* ── Sections ──────────────────────────── */
+.about-section {
+  margin-bottom: 2.75rem;
+  padding-bottom: 2.75rem;
+  border-bottom: 1px solid #1e293b;
+}
+
+.about-section:last-of-type {
+  border-bottom: none;
+}
+
+/* Staggered entrance per section */
+.about-section--1 { animation: about-page-enter 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.18s both; }
+.about-section--2 { animation: about-page-enter 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.26s both; }
+.about-section--3 { animation: about-page-enter 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.34s both; }
+.about-section--4 { animation: about-page-enter 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.42s both; }
+
+.about-section-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: #6366f1;
+  margin-bottom: 0.5rem;
+}
+
+.about-section h2 {
+  font-size: 1.4rem;
+  color: #f1f5f9;
+  margin: 0 0 1rem;
+  font-weight: 700;
+}
+
+.about-section p {
+  color: #94a3b8;
+  line-height: 1.75;
+  font-size: 0.95rem;
+  margin: 0 0 0.85rem;
+}
+
+.about-section p:last-child {
+  margin-bottom: 0;
+}
+
+/* ── Features grid ─────────────────────── */
+.about-features {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  margin-top: 0.5rem;
+}
+
+.about-feature {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 12px;
+  padding: 1.1rem 1.25rem;
+}
+
+.about-feature-icon {
+  font-size: 1.5rem;
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+}
+
+.about-feature strong {
+  display: block;
+  color: #f1f5f9;
+  font-size: 0.95rem;
+  margin-bottom: 0.3rem;
+}
+
+.about-feature p {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #64748b;
+  line-height: 1.6;
+}
+
+/* ── Footer ────────────────────────────── */
+.about-footer {
+  text-align: center;
+  margin-top: 1rem;
+  animation: about-page-enter 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.5s both;
+}
+
+.about-footer p {
+  color: #475569;
+  font-size: 0.8rem;
+  margin: 0 0 0.35rem;
+}
+
+.about-footer-sub {
+  color: #334155;
+  font-style: italic;
+}

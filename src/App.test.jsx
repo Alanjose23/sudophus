@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import App from './App'
 
@@ -18,6 +18,9 @@ vi.mock('./journal', () => ({
 }))
 vi.mock('./project', () => ({
   default: () => <div data-testid="project">Project</div>,
+}))
+vi.mock('./about', () => ({
+  default: () => <div data-testid="about">About Page</div>,
 }))
 
 describe('App', () => {
@@ -137,6 +140,45 @@ describe('App', () => {
       fireEvent.click(screen.getByText('Projects'))
       fireEvent.click(screen.getByText('← Back'))
       expect(screen.getByText('Sudophus')).toBeInTheDocument()
+    })
+  })
+
+  describe('About navigation (hero image click)', () => {
+    it('adds the clicking class to the image immediately on click', () => {
+      vi.useFakeTimers()
+      render(<App />)
+      const img = screen.getByAltText('climb the mountain')
+      fireEvent.click(img)
+      expect(img.className).toContain('hero-img--clicking')
+      vi.useRealTimers()
+    })
+
+    it('navigates to the About page after the animation delay', async () => {
+      vi.useFakeTimers()
+      render(<App />)
+      fireEvent.click(screen.getByAltText('climb the mountain'))
+      await act(async () => { vi.runAllTimers() })
+      expect(screen.getByTestId('about')).toBeInTheDocument()
+      vi.useRealTimers()
+    })
+
+    it('shows the Back button on the About page', async () => {
+      vi.useFakeTimers()
+      render(<App />)
+      fireEvent.click(screen.getByAltText('climb the mountain'))
+      await act(async () => { vi.runAllTimers() })
+      expect(screen.getByText('← Back')).toBeInTheDocument()
+      vi.useRealTimers()
+    })
+
+    it('returns to home screen from About via Back button', async () => {
+      vi.useFakeTimers()
+      render(<App />)
+      fireEvent.click(screen.getByAltText('climb the mountain'))
+      await act(async () => { vi.runAllTimers() })
+      fireEvent.click(screen.getByText('← Back'))
+      expect(screen.getByText('Sudophus')).toBeInTheDocument()
+      vi.useRealTimers()
     })
   })
 })

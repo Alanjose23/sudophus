@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import Journal from './journal'
 import Loginscreen from './login'
 import Project from './project'
+import About from './about'
 import quotes from './quotes'
 import { auth } from './firebase'
 import { onAuthStateChanged, signOut } from 'firebase/auth'
@@ -25,6 +26,7 @@ function App() {
   const [count, setCount] = useState(0)
   const [user, setUser] = useState(null)
   const [authReady, setAuthReady] = useState(false)
+  const [imgClicking, setImgClicking] = useState(false)
   const [quote, setQuote] = useState(
     () => quotes[Math.floor(Math.random() * quotes.length)]
   )
@@ -60,6 +62,14 @@ function App() {
 
   const goHome = () => setScreen("home")
 
+  const handleImageClick = () => {
+    setImgClicking(true)
+    setTimeout(() => {
+      setImgClicking(false)
+      setScreen("about")
+    }, 350)
+  }
+
   if (!authReady) {
     return (
       <div className="loading-screen">
@@ -69,6 +79,14 @@ function App() {
   }
 
   switch (screen) {
+    case "about":
+      return (
+        <div className="app-wrapper">
+          <AppHeader user={user} onBack={backClick} onHome={goHome} />
+          <About />
+        </div>
+      )
+
     case "journal":
       return (
         <div className="app-wrapper">
@@ -114,7 +132,13 @@ function App() {
           </nav>
 
           <div className="hero">
-            <img src="../public/sudo.jpg" alt="climb the mountain" className="hero-img" />
+            <img
+              src="../public/sudo.jpg"
+              alt="climb the mountain"
+              className={`hero-img${imgClicking ? " hero-img--clicking" : ""}`}
+              onClick={handleImageClick}
+              title="About Sudophus"
+            />
             <h1>Sudophus</h1>
             <p className="subtitle">Document your coding journey. Maintain your momentum.</p>
             <div className="quote-block">
