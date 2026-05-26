@@ -1,0 +1,83 @@
+.project-container {
+  max-width: 700px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.project-card {
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 16px;
+  padding: 2rem 2.25rem;
+}
+
+.project-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+  gap: 1rem;
+}
+
+.project-header h3 {
+  margin: 0 0 0.2rem;
+  font-size: 1.4rem;
+  color: #f1f5f9;
+}
+
+.project-author {
+  color: #64748b;
+  font-size: 0.825rem;
+  margin: 0;
+}
+
+.star-btn {
+  user-select: none;
+  color: #475569;
+  transition: color 0.2s, transform 0.15s;
+  flex-shrink: 0;
+}
+
+.star-btn:hover {
+  transform: scale(1.2);
+  color: #f59e0b;
+}
+
+.star-btn.starred {
+  color: #f59e0b;
+}
+
+.project-description {
+  color: #94a3b8;
+  font-size: 0.925rem;
+  line-height: 1.6;
+  margin: 0 0 1.25rem;
+}
+
+.project-divider {
+  border: none;
+  border-top: 1px solid #334155;
+  margin: 0 0 1.25rem;
+}
+
+.project-content {
+  color: #cbd5e1;
+  line-height: 1.7;
+  font-size: 0.925rem;
+  margin: 0 0 1.5rem;
+}
+
+.project-tags {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.tag {
+  padding: 0.25rem 0.75rem;
+  background: #312e81;
+  color: #a5b4fc;
+  border-radius: 99px;
+  font-size: 0.775rem;
+  font-weight: 500;
+}

@@ -3,130 +3,149 @@ import Journal from './journal'
 import Loginscreen from './login'
 import Project from './project'
 import quotes from './quotes'
+import { auth } from './firebase'
+import { onAuthStateChanged, signOut } from 'firebase/auth'
 
 import './App.css'
 
+function AppHeader({ user, onBack, onHome }) {
+  return (
+    <header className="app-header">
+      <span className="header-title" onClick={onHome}>Sudophus</span>
+      <div className="header-actions">
+        {user && <span className="header-user">{user.email}</span>}
+        <button onClick={onBack} className="btn-ghost">← Back</button>
+      </div>
+    </header>
+  )
+}
+
 function App() {
-  let [screen, setScreen] = useState("home")
-  let [count, setCount] = useState(0)
-  let [user, setUser] = useState(false)
-  let [quote, setQuotes] = useState("")
-  
-  //next steps, setup databases and user routing, and start designing for other features, as well as learning the css for the website
+  const [screen, setScreen] = useState("home")
+  const [count, setCount] = useState(0)
+  const [user, setUser] = useState(null)
+  const [authReady, setAuthReady] = useState(false)
+  const [quote, setQuote] = useState(
+    () => quotes[Math.floor(Math.random() * quotes.length)]
+  )
+
   const quoteChange = () => {
-    let x = Math.random() * (100 - 0) + 0
-     setQuotes(quotes[Math.round(x)])
+    const idx = Math.floor(Math.random() * quotes.length)
+    setQuote(quotes[idx])
   }
+
   useEffect(() => {
-    quoteChange();
-  },[])
-  // to explore useEffect, implemented
-  const journalClick = () => {
-    if(!user)(
-      alert("Please sign in to account to access this feature")
-    )
-    setCount(count + 1)
-    setScreen("journal")
-    
-  }
-  const loginClick = () => {
-    setScreen("login")
-  }
-  const backClick = () => {
-    if(screen == "login") {
-      setCount(count * 0)
-    }
-    
+    const unsubscribe = onAuthStateChanged(auth, (u) => {
+      setUser(u)
+      setAuthReady(true)
+    })
+    return unsubscribe
+  }, [])
+
+  const handleLogout = async () => {
+    await signOut(auth)
     setScreen("home")
-    
-  }
-  const projectclick = () => {
-    if(!user)(
-      alert("Please sign in to account to access this feature")
-    )
-    setScreen("project")
+    setCount(0)
   }
 
-  switch(screen) {
+  const journalClick = () => {
+    setCount(c => c + 1)
+    setScreen("journal")
+  }
 
-    case "journal":
-      if(!user){
-        return(
-          <div>
-          <Loginscreen/>
-          <button onClick = {backClick}>Go Back</button>
-        </div>
-        )
+  const backClick = () => {
+    if (screen === "login") setCount(0)
+    setScreen("home")
+  }
 
-      }
-      
+  const goHome = () => setScreen("home")
 
-      else {
+  if (!authReady) {
     return (
-        <div>
-      <Journal entryC = {count}/>
-    <button onClick = {backClick} >Go Back</button>
-    </div>
-    )}
+      <div className="loading-screen">
+        <span className="loading-dot" />
+      </div>
+    )
+  }
 
-    case "login": 
+  switch (screen) {
+    case "journal":
       return (
-        <div>
-          <Loginscreen/>
-          <button onClick = {backClick}>Go Back</button>
+        <div className="app-wrapper">
+          <AppHeader user={user} onBack={backClick} onHome={goHome} />
+          {user
+            ? <Journal entryC={count} user={user} />
+            : <div className="auth-prompt"><Loginscreen /></div>
+          }
         </div>
       )
-    case "project": 
-    if(!user){
+
+    case "login":
       return (
-        <div>
-          <Loginscreen/>
-          <button onClick = {backClick}>Go Back</button>
+        <div className="app-wrapper">
+          <AppHeader user={user} onBack={backClick} onHome={goHome} />
+          <Loginscreen />
         </div>
       )
-    }
-    else
+
+    case "project":
       return (
-        <div>
-          <Project/>
-          <button onClick = {backClick}>Go Back</button>
+        <div className="app-wrapper">
+          <AppHeader user={user} onBack={backClick} onHome={goHome} />
+          {user
+            ? <Project user={user} />
+            : <div className="auth-prompt"><Loginscreen /></div>
+          }
         </div>
-      )  
+      )
 
+    default:
+      return (
+        <div className="container">
+          <nav className="home-nav">
+            {user ? (
+              <div className="user-bar">
+                <span className="user-greeting">{user.email}</span>
+                <button onClick={handleLogout} className="btn-outline">Log Out</button>
+              </div>
+            ) : (
+              <button onClick={() => setScreen("login")} className="btn-outline">Login</button>
+            )}
+          </nav>
 
-  default: return (
-    <div className = "container">
-    
-      <div style  = {{ textalign: 'center'}}>
-        <img src="../public/sudo.jpg" alt="climb the mountain" />
-      <h1>Sudophus</h1>
-      <h4>A Journaling Application which documents progress of your coding journey and helps maintain your mental health.</h4>
-      <h6><i>{quote}</i></h6>
-      <button onClick = {quoteChange}>Change Quote</button>
-      </div>
-      <div className="card">
-        <button onClick={journalClick}>
-          log entries {count}
-        </button>
-        <p>
-          Add a new page in your life
-        </p>
-      </div>
-      <div className = "card">
-        <button onClick = {projectclick}>Projects</button>
-        <p>Create something unique</p>
-      </div>
-      <div className = "card">
-        <button onClick = {loginClick}>Login</button>
-        <p>Start tracking your journey</p>
-      </div>
-      <div textalign = "center">Current amount of project entries: </div>
-  </div> )}
-   
-  
-    
-      }
+          <div className="hero">
+            <img src="../public/sudo.jpg" alt="climb the mountain" className="hero-img" />
+            <h1>Sudophus</h1>
+            <p className="subtitle">Document your coding journey. Maintain your momentum.</p>
+            <div className="quote-block">
+              <p className="quote-text"><i>{quote}</i></p>
+              <button onClick={quoteChange} className="btn-ghost-sm">Refresh quote</button>
+            </div>
+          </div>
 
+          <div className="cards">
+            <div className="card" onClick={journalClick}>
+              <div className="card-icon">📓</div>
+              <h3>Journal</h3>
+              <p>Record your daily progress and reflections</p>
+              {count > 0 && <span className="badge" data-testid="journal-count">{count}</span>}
+            </div>
+            <div className="card" onClick={() => setScreen("project")}>
+              <div className="card-icon">🚀</div>
+              <h3>Projects</h3>
+              <p>Showcase and track your builds</p>
+            </div>
+            {!user && (
+              <div className="card" onClick={() => setScreen("login")}>
+                <div className="card-icon">🔑</div>
+                <h3>Sign In</h3>
+                <p>Start tracking your journey</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )
+  }
+}
 
 export default App
-

@@ -1,0 +1,118 @@
+.journal-container {
+  max-width: 700px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.journal-container h2 {
+  font-size: 1.5rem;
+  color: #f1f5f9;
+  margin: 0 0 0.25rem;
+}
+
+.journal-meta {
+  color: #64748b;
+  font-size: 0.875rem;
+  margin: 0 0 1.5rem;
+}
+
+.journal-textarea {
+  width: 100%;
+  min-height: 260px;
+  padding: 1rem 1.1rem;
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 12px;
+  color: #f1f5f9;
+  font-size: 1rem;
+  font-family: inherit;
+  line-height: 1.65;
+  resize: vertical;
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.journal-textarea:focus {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
+}
+
+.journal-textarea::placeholder {
+  color: #475569;
+}
+
+.journal-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 0.75rem;
+}
+
+.entries-list {
+  margin-top: 2.5rem;
+}
+
+.entries-heading {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #475569;
+  margin: 0 0 1rem;
+}
+
+.entry-item {
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 12px;
+  padding: 1.1rem 1.25rem;
+  margin-bottom: 0.75rem;
+  text-align: left;
+}
+
+.entry-item p {
+  margin: 0;
+  color: #cbd5e1;
+  line-height: 1.65;
+  white-space: pre-wrap;
+  font-size: 0.9rem;
+}
+
+.entry-meta {
+  display: block;
+  font-size: 0.72rem;
+  color: #475569;
+  margin-top: 0.5rem;
+}
+
+/* ── Loading skeleton ───────────────────── */
+.entries-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.skeleton-item {
+  height: 80px;
+  background: linear-gradient(90deg, #1e293b 25%, #263448 50%, #1e293b 75%);
+  background-size: 200% 100%;
+  border-radius: 12px;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ── Load error ─────────────────────────── */
+.entries-error {
+  background: #1f0a0a;
+  border: 1px solid #7f1d1d;
+  color: #fca5a5;
+  padding: 0.65rem 1rem;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
