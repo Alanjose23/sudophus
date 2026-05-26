@@ -3,10 +3,20 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import Project from './project'
 import { calcStreak, progressPct, progressColor } from './projectHelpers'
 import { getDocs, addDoc, updateDoc } from 'firebase/firestore'
+import { uploadBytesResumable, deleteObject } from 'firebase/storage'
 
 const mockUser = { uid: 'user-123', email: 'dev@example.com' }
 
-vi.mock('./firebase', () => ({ db: {} }))
+vi.mock('./firebase', () => ({ db: {}, storage: {} }))
+vi.mock('firebase/storage', () => ({
+  ref: vi.fn(() => 'mock-storage-ref'),
+  uploadBytesResumable: vi.fn(() => ({
+    on: vi.fn((_, _progress, _error, onComplete) => { Promise.resolve().then(onComplete) }),
+    snapshot: { ref: 'mock-storage-ref' },
+  })),
+  getDownloadURL: vi.fn(() => Promise.resolve('https://storage.example.com/shot.jpg')),
+  deleteObject: vi.fn(() => Promise.resolve()),
+}))
 vi.mock('firebase/firestore', () => ({
   collection: vi.fn(),
   addDoc: vi.fn(() => Promise.resolve({ id: 'new-doc-id' })),
@@ -303,6 +313,68 @@ describe('Project component', () => {
       fireEvent.click(screen.getByTitle('Star'))
       await waitFor(() => {
         expect(screen.getByTitle('Unstar')).toBeInTheDocument()
+      })
+    })
+  })
+
+  describe('screenshots', () => {
+    const projectWithScreenshots = {
+      ...sampleProject,
+      screenshots: [{
+        url: 'https://storage.example.com/existing.jpg',
+        name: 'existing.jpg',
+        storagePath: 'screenshots/user-123/doc-0/123_existing.jpg',
+        uploadedAt: new Date('2026-05-01'),
+      }],
+    }
+
+    const navigateToDetail = async (projectData = sampleProject) => {
+      getDocs
+        .mockResolvedValueOnce(makeSnap([projectData]))
+        .mockResolvedValueOnce(makeSnap([]))
+      render(<Project user={mockUser} />)
+      await waitFor(() => screen.getByText('Test App'))
+      fireEvent.click(screen.getByText('Test App'))
+    }
+
+    it('shows the Screenshots section heading', async () => {
+      await navigateToDetail()
+      expect(screen.getByText('Screenshots')).toBeInTheDocument()
+    })
+
+    it('shows empty state text when no screenshots exist', async () => {
+      await navigateToDetail()
+      expect(screen.getByText(/no screenshots yet/i)).toBeInTheDocument()
+    })
+
+    it('shows the add screenshot button', async () => {
+      await navigateToDetail()
+      expect(screen.getByText('+ Add screenshot')).toBeInTheDocument()
+    })
+
+    it('renders existing screenshots as thumbnails', async () => {
+      await navigateToDetail(projectWithScreenshots)
+      expect(screen.getByTestId('screenshots-grid')).toBeInTheDocument()
+      expect(screen.getByRole('img', { name: 'existing.jpg' })).toBeInTheDocument()
+    })
+
+    it('uploads a file and displays the new thumbnail', async () => {
+      await navigateToDetail()
+      const input = screen.getByTestId('screenshot-input')
+      const file = new File(['data'], 'new-shot.png', { type: 'image/png' })
+      fireEvent.change(input, { target: { files: [file] } })
+      await waitFor(() => {
+        expect(uploadBytesResumable).toHaveBeenCalled()
+        expect(screen.getByRole('img', { name: 'new-shot.png' })).toBeInTheDocument()
+      })
+    })
+
+    it('removes a screenshot and calls deleteObject', async () => {
+      await navigateToDetail(projectWithScreenshots)
+      fireEvent.click(screen.getByTestId('screenshot-delete'))
+      await waitFor(() => {
+        expect(deleteObject).toHaveBeenCalled()
+        expect(screen.queryByRole('img', { name: 'existing.jpg' })).not.toBeInTheDocument()
       })
     })
   })

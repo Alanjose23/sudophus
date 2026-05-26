@@ -1,11 +1,14 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Journal from './journal'
 import Loginscreen from './login'
 import Project from './project'
 import About from './about'
+import Roadmap from './roadmap'
 import quotes from './quotes'
-import { auth } from './firebase'
+import { ROADMAPS } from './roadmapData'
+import { auth, db } from './firebase'
 import { onAuthStateChanged, signOut } from 'firebase/auth'
+import { doc, getDoc } from 'firebase/firestore'
 
 import './App.css'
 
@@ -30,6 +33,8 @@ function App() {
   const [quote, setQuote] = useState(
     () => quotes[Math.floor(Math.random() * quotes.length)]
   )
+  const [userPathway, setUserPathway] = useState(null)
+  const pathwayPromptedRef = useRef(false)
 
   const quoteChange = () => {
     const idx = Math.floor(Math.random() * quotes.length)
@@ -40,6 +45,19 @@ function App() {
     const unsubscribe = onAuthStateChanged(auth, (u) => {
       setUser(u)
       setAuthReady(true)
+      if (!u) {
+        setUserPathway(null)
+        pathwayPromptedRef.current = false
+        return
+      }
+      getDoc(doc(db, "users", u.uid)).then(snap => {
+        const pathway = snap.data()?.activePathway ?? null
+        setUserPathway(pathway)
+        if (!pathway && !pathwayPromptedRef.current) {
+          pathwayPromptedRef.current = true
+          setScreen("roadmap")
+        }
+      })
     })
     return unsubscribe
   }, [])
@@ -117,6 +135,17 @@ function App() {
         </div>
       )
 
+    case "roadmap":
+      return (
+        <div className="app-wrapper">
+          <AppHeader user={user} onBack={backClick} onHome={goHome} />
+          {user
+            ? <Roadmap user={user} onPathwaySet={id => setUserPathway(id)} />
+            : <div className="auth-prompt"><Loginscreen /></div>
+          }
+        </div>
+      )
+
     default:
       return (
         <div className="container">
@@ -159,6 +188,17 @@ function App() {
               <h3>Projects</h3>
               <p>Showcase and track your builds</p>
             </div>
+            {user && (
+              <div className="card" onClick={() => setScreen("roadmap")}>
+                <div className="card-icon">🗺️</div>
+                <h3>Learning Kit</h3>
+                <p>
+                  {userPathway
+                    ? `${ROADMAPS[userPathway]?.title ?? "Custom"} pathway`
+                    : "Set up your learning pathway"}
+                </p>
+              </div>
+            )}
             {!user && (
               <div className="card" onClick={() => setScreen("login")}>
                 <div className="card-icon">🔑</div>

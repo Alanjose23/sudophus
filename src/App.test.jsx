@@ -3,6 +3,10 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import App from './App'
 
 vi.mock('./firebase', () => ({ db: {}, auth: {} }))
+vi.mock('firebase/firestore', () => ({
+  doc: vi.fn(() => 'mock-doc-ref'),
+  getDoc: vi.fn(() => Promise.resolve({ data: () => null })),
+}))
 vi.mock('firebase/auth', () => ({
   onAuthStateChanged: vi.fn((auth, cb) => {
     cb(null) // simulate signed-out state
@@ -21,6 +25,16 @@ vi.mock('./project', () => ({
 }))
 vi.mock('./about', () => ({
   default: () => <div data-testid="about">About Page</div>,
+}))
+vi.mock('./roadmap', () => ({
+  default: ({ onPathwaySet }) => (
+    <div data-testid="roadmap" onClick={() => onPathwaySet?.('frontend')}>Roadmap</div>
+  ),
+}))
+vi.mock('./roadmapData', () => ({
+  ROADMAPS: {
+    frontend: { id: 'frontend', title: 'Frontend Developer' },
+  },
 }))
 
 describe('App', () => {

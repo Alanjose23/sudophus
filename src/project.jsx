@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react"
-import { db } from "./firebase"
+import { db, storage } from "./firebase"
 import {
   collection, addDoc, getDocs, doc, updateDoc,
   query, where, serverTimestamp,
 } from "firebase/firestore"
+import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from "firebase/storage"
 import "./project.css"
 import { calcStreak, progressPct, progressColor } from "./projectHelpers"
 
@@ -161,9 +162,42 @@ function CreateProjectForm({ user, onCreated, onCancel }) {
 function ProjectDetail({ project, entries, user, onBack, onEntryAdded, onStar }) {
   const [text, setText] = useState("")
   const [saving, setSaving] = useState(false)
+  const [screenshots, setScreenshots] = useState(project.screenshots ?? [])
+  const [uploadProgress, setUploadProgress] = useState(null)
   const pct = progressPct(entries.length, project.target)
   const color = progressColor(pct)
   const streak = calcStreak(entries)
+
+  const handleUpload = file => {
+    if (uploadProgress !== null) return
+    const path = `screenshots/${user.uid}/${project.id}/${Date.now()}_${file.name}`
+    const storageRef = ref(storage, path)
+    setUploadProgress(0)
+    const task = uploadBytesResumable(storageRef, file)
+    task.on(
+      "state_changed",
+      snap => setUploadProgress(Math.round(snap.bytesTransferred / snap.totalBytes * 100)),
+      () => setUploadProgress(null),
+      () => {
+        getDownloadURL(task.snapshot.ref).then(url => {
+          const newShot = { url, name: file.name, storagePath: path, uploadedAt: new Date() }
+          setScreenshots(prev => {
+            const updated = [...prev, newShot]
+            updateDoc(doc(db, "projects", project.id), { screenshots: updated })
+            return updated
+          })
+          setUploadProgress(null)
+        })
+      }
+    )
+  }
+
+  const handleDeleteScreenshot = async shot => {
+    const updated = screenshots.filter(s => s.storagePath !== shot.storagePath)
+    setScreenshots(updated)
+    await updateDoc(doc(db, "projects", project.id), { screenshots: updated })
+    try { await deleteObject(ref(storage, shot.storagePath)) } catch { /* already gone */ }
+  }
 
   const handleLog = async () => {
     if (!text.trim() || saving) return
@@ -283,6 +317,57 @@ function ProjectDetail({ project, entries, user, onBack, onEntryAdded, onStar })
           {project.tags.map(t => <span key={t} className="tag">{t}</span>)}
         </div>
       )}
+
+      <div className="screenshots-section">
+        <div className="screenshots-header">
+          <h3 className="screenshots-title">Screenshots</h3>
+          <label className={`btn-ghost-sm${uploadProgress !== null ? " uploading" : ""}`} style={{ cursor: "pointer" }}>
+            {uploadProgress !== null ? `Uploading ${uploadProgress}%` : "+ Add screenshot"}
+            <input
+              type="file"
+              accept="image/*"
+              style={{ display: "none" }}
+              disabled={uploadProgress !== null}
+              onChange={e => {
+                if (e.target.files[0]) handleUpload(e.target.files[0])
+                e.target.value = ""
+              }}
+              data-testid="screenshot-input"
+            />
+          </label>
+        </div>
+
+        {uploadProgress !== null && (
+          <div className="upload-progress-bar">
+            <div className="upload-progress-fill" style={{ width: `${uploadProgress}%` }} />
+          </div>
+        )}
+
+        {screenshots.length > 0 ? (
+          <div className="screenshots-grid" data-testid="screenshots-grid">
+            {screenshots.map((shot, i) => (
+              <div key={shot.storagePath ?? i} className="screenshot-thumb">
+                <img
+                  src={shot.url}
+                  alt={shot.name}
+                  className="screenshot-img"
+                  onClick={() => window.open(shot.url, "_blank")}
+                />
+                <button
+                  className="screenshot-delete"
+                  onClick={() => handleDeleteScreenshot(shot)}
+                  title="Remove screenshot"
+                  data-testid="screenshot-delete"
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="screenshots-empty">No screenshots yet. Document your build visually.</p>
+        )}
+      </div>
     </div>
   )
 }
