@@ -106,6 +106,98 @@ function AppHeader({ user, onBack, onHome, onDashboard }) {
   )
 }
 
+function HubCards({ onNavigate, onJournal, userPathway, count }) {
+  const items = [
+    {
+      id:    "journal",
+      icon:  "📓",
+      label: "Journal",
+      desc:  "Log your daily progress",
+      badge: count > 0 ? count : null,
+      delay: "0s",
+    },
+    {
+      id:    "project",
+      icon:  "🚀",
+      label: "Projects",
+      desc:  "Build & showcase your work",
+      delay: "0.6s",
+    },
+    {
+      id:    "roadmap",
+      icon:  "🗺️",
+      label: "Dev Topics",
+      desc:  userPathway
+        ? `${ROADMAPS[userPathway]?.title ?? "Custom"} pathway`
+        : "Set your learning path",
+      delay: "1.2s",
+    },
+  ]
+
+  return (
+    <div className="hub-section">
+      <svg
+        className="hub-svg"
+        viewBox="0 0 820 300"
+        fill="none"
+        aria-hidden="true"
+        xmlns="http://www.w3.org/2000/svg"
+        preserveAspectRatio="xMidYMid meet"
+      >
+        <defs>
+          <linearGradient id="hgl" x1="100%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%"   stopColor="#c9b8a0" stopOpacity="0.9" />
+            <stop offset="100%" stopColor="#a78b71" stopOpacity="0.1" />
+          </linearGradient>
+          <linearGradient id="hgm" x1="50%" y1="0%" x2="50%" y2="100%">
+            <stop offset="0%"   stopColor="#c9b8a0" stopOpacity="0.9" />
+            <stop offset="100%" stopColor="#a78b71" stopOpacity="0.1" />
+          </linearGradient>
+          <linearGradient id="hgr" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%"   stopColor="#c9b8a0" stopOpacity="0.9" />
+            <stop offset="100%" stopColor="#a78b71" stopOpacity="0.1" />
+          </linearGradient>
+        </defs>
+
+        {/* Hub node → Journal */}
+        <path className="node-line" style={{ animationDelay: "0s" }}
+          d="M410,24 C380,80 240,140 139,188" stroke="url(#hgl)" />
+        {/* Hub node → Projects */}
+        <path className="node-line" style={{ animationDelay: "0.6s" }}
+          d="M410,24 C410,80 410,130 410,192" stroke="url(#hgm)" />
+        {/* Hub node → Dev Topics */}
+        <path className="node-line" style={{ animationDelay: "1.2s" }}
+          d="M410,24 C440,80 580,140 681,188" stroke="url(#hgr)" />
+
+        {/* Hub center */}
+        <circle cx="410" cy="24" r="5"  fill="#c9b8a0" opacity="0.85" />
+        <circle cx="410" cy="24" r="14" fill="none" stroke="#c9b8a0" strokeWidth="0.6" opacity="0.25" />
+        <circle cx="410" cy="24" r="26" fill="none" stroke="#c9b8a0" strokeWidth="0.3" opacity="0.12" />
+
+        {/* Endpoint accent dots */}
+        <circle cx="139" cy="188" r="3.5" fill="#a78b71" opacity="0.55" />
+        <circle cx="410" cy="192" r="3.5" fill="#a78b71" opacity="0.55" />
+        <circle cx="681" cy="188" r="3.5" fill="#a78b71" opacity="0.55" />
+      </svg>
+
+      <div className="hub-cards">
+        {items.map(item => (
+          <button
+            key={item.id}
+            className="hub-card"
+            onClick={() => item.id === "journal" ? onJournal() : onNavigate(item.id)}
+          >
+            <span className="hub-card-icon">{item.icon}</span>
+            <span className="hub-card-label">{item.label}</span>
+            <span className="hub-card-desc">{item.desc}</span>
+            {item.badge && <span className="hub-card-badge">{item.badge}</span>}
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 function App() {
   const [screen, setScreen] = useState("home")
   const [history, setHistory] = useState([])
@@ -133,14 +225,16 @@ function App() {
         pathwayPromptedRef.current = false
         return
       }
-      getDoc(doc(db, "users", u.uid)).then(snap => {
-        const pathway = snap.data()?.activePathway ?? null
-        setUserPathway(pathway)
-        if (!pathway && !pathwayPromptedRef.current) {
-          pathwayPromptedRef.current = true
-          setScreen("roadmap")
-        }
-      })
+      getDoc(doc(db, "users", u.uid))
+        .then(snap => {
+          const pathway = snap.data()?.activePathway ?? null
+          setUserPathway(pathway)
+          if (!pathway && !pathwayPromptedRef.current) {
+            pathwayPromptedRef.current = true
+            setScreen("roadmap")
+          }
+        })
+        .catch(err => console.error("Failed to load user data:", err))
     })
     return unsubscribe
   }, [])
@@ -324,45 +418,33 @@ function App() {
             <button onClick={quoteChange} className="btn-ghost-sm">↻ Refresh</button>
           </div>
 
-          {/* ── Feature cards ── */}
-          <div className="cards">
-            <div className="card" onClick={journalClick}>
-              <div className="card-icon">📓</div>
-              <h3>Journal</h3>
-              <p>Record your daily progress and reflections</p>
-              {count > 0 && <span className="badge" data-testid="journal-count">{count}</span>}
-            </div>
-            <div className="card" onClick={() => navigateTo("project")}>
-              <div className="card-icon">🚀</div>
-              <h3>Projects</h3>
-              <p>Showcase and track your builds</p>
-            </div>
-            {user && (
-              <div className="card" onClick={() => navigateTo("roadmap")}>
-                <div className="card-icon">🗺️</div>
-                <h3>Learning Kit</h3>
-                <p>
-                  {userPathway
-                    ? `${ROADMAPS[userPathway]?.title ?? "Custom"} pathway`
-                    : "Set up your learning pathway"}
-                </p>
+          {/* ── Feature area ── */}
+          {user ? (
+            <HubCards
+              onNavigate={navigateTo}
+              onJournal={journalClick}
+              userPathway={userPathway}
+              count={count}
+            />
+          ) : (
+            <div className="cards">
+              <div className="card" onClick={journalClick}>
+                <div className="card-icon">📓</div>
+                <h3>Journal</h3>
+                <p>Record your daily progress and reflections</p>
               </div>
-            )}
-            {user && (
-              <div className="card" onClick={goDashboard}>
-                <div className="card-icon">👤</div>
-                <h3>Dashboard</h3>
-                <p>Profile, email &amp; password settings</p>
+              <div className="card" onClick={() => navigateTo("project")}>
+                <div className="card-icon">🚀</div>
+                <h3>Projects</h3>
+                <p>Showcase and track your builds</p>
               </div>
-            )}
-            {!user && (
               <div className="card" onClick={() => navigateTo("login")}>
                 <div className="card-icon">🔑</div>
                 <h3>Sign In</h3>
                 <p>Start tracking your journey</p>
               </div>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       )
   }

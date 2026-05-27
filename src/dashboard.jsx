@@ -156,8 +156,12 @@ function PricingTab() {
                 </li>
               ))}
             </ul>
-            <button className={`dash-tier-cta${tier.current ? " dash-tier-cta--current" : ""}`} disabled={tier.current}>
-              {tier.cta}
+            <button
+              className={`dash-tier-cta${tier.current ? " dash-tier-cta--current" : " dash-tier-cta--soon"}`}
+              disabled
+              title={tier.current ? "Your current plan" : "Coming soon"}
+            >
+              {tier.current ? tier.cta : "Coming soon"}
             </button>
           </div>
         ))}

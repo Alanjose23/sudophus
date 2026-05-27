@@ -272,14 +272,14 @@
 }
 
 @keyframes pulsing-branch {
-  0%, 100% { opacity: 0.4; }
-  50%       { opacity: 0.75; }
+  0%, 100% { opacity: 0;    }
+  40%, 60%  { opacity: 0.85; }
 }
 
 .node-line {
-  stroke-width: 1.5;
+  stroke-width: 2.5;
   fill: none;
-  animation: pulsing-branch 4s ease-in-out infinite;
+  animation: pulsing-branch 3.6s ease-in-out infinite;
 }
 
 .node-dash {
@@ -526,6 +526,140 @@
   border-radius: 99px;
   font-size: 0.75rem;
   font-weight: 600;
+}
+
+/* ═══════════════════════════════════════════
+   HUB CARDS (logged-in home)
+═══════════════════════════════════════════ */
+.hub-section {
+  position: relative;
+  max-width: 820px;
+  margin: 0 auto;
+  padding: 0 2rem 4rem;
+}
+
+.hub-svg {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 820px;
+  max-width: 100%;
+  height: 300px;
+  pointer-events: none;
+  overflow: visible;
+  z-index: 0;
+}
+
+.hub-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+  position: relative;
+  z-index: 1;
+  padding-top: 3rem;
+}
+
+.hub-card {
+  aspect-ratio: 1;
+  background: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 24px;
+  padding: 2rem 1.5rem;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+  text-align: center;
+  font-family: inherit;
+  transition: border-color 0.25s var(--ease), transform 0.2s, box-shadow 0.25s;
+  position: relative;
+  overflow: hidden;
+}
+
+.hub-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 20%, rgba(167, 139, 113, 0.12) 0%, transparent 65%);
+  opacity: 0;
+  transition: opacity 0.3s;
+  border-radius: inherit;
+}
+
+.hub-card:hover {
+  border-color: rgba(167, 139, 113, 0.5);
+  transform: translateY(-7px);
+  box-shadow: 0 18px 50px rgba(167, 139, 113, 0.16);
+}
+
+.hub-card:hover::before { opacity: 1; }
+
+.hub-card-icon {
+  font-size: 2.6rem;
+  line-height: 1;
+  display: block;
+  filter: drop-shadow(0 0 10px rgba(167, 139, 113, 0.4));
+  transition: filter 0.25s, transform 0.25s;
+}
+
+.hub-card:hover .hub-card-icon {
+  filter: drop-shadow(0 0 18px rgba(201, 184, 160, 0.65));
+  transform: scale(1.1);
+}
+
+.hub-card-label {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.9);
+  letter-spacing: -0.01em;
+  display: block;
+}
+
+.hub-card-desc {
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.35);
+  line-height: 1.5;
+  display: block;
+}
+
+.hub-card-badge {
+  position: absolute;
+  top: 0.9rem;
+  right: 0.9rem;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 0.45rem;
+  background: linear-gradient(135deg, #a78b71, #c9b8a0);
+  color: #0a0a0a;
+  font-size: 0.65rem;
+  font-weight: 800;
+  border-radius: 99px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@media (max-width: 620px) {
+  .hub-svg { display: none; }
+  .hub-cards {
+    grid-template-columns: 1fr;
+    gap: 0.9rem;
+    padding-top: 0.5rem;
+  }
+  .hub-card {
+    aspect-ratio: unset;
+    flex-direction: row;
+    justify-content: flex-start;
+    text-align: left;
+    padding: 1.25rem 1.5rem;
+    gap: 1rem;
+  }
+  .hub-card-icon { font-size: 1.8rem; flex-shrink: 0; }
 }
 
 /* ═══════════════════════════════════════════
@@ -1146,6 +1280,7 @@
 
 .dash-tier-cta:hover:not(:disabled) { opacity: 0.85; transform: translateY(-1px); }
 .dash-tier-cta--current { background: rgba(255, 255, 255, 0.06); color: var(--text-faint); cursor: default; }
+.dash-tier-cta--soon    { background: rgba(255, 255, 255, 0.04); color: var(--text-faint); cursor: not-allowed; border: 1px solid rgba(255,255,255,0.08); font-size: 0.75rem; letter-spacing: 0.04em; }
 
 /* ── Suggestions tab ─────────────────────── */
 .dash-sugg-header {

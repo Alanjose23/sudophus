@@ -190,16 +190,20 @@ function ProjectDetail({ project, entries, user, onBack, onEntryAdded, onStar, o
       "state_changed",
       snap => setUploadProgress(Math.round(snap.bytesTransferred / snap.totalBytes * 100)),
       () => setUploadProgress(null),
-      () => {
-        getDownloadURL(task.snapshot.ref).then(url => {
+      async () => {
+        try {
+          const url = await getDownloadURL(task.snapshot.ref)
           const newShot = { url, name: file.name, storagePath: path, uploadedAt: new Date() }
-          setScreenshots(prev => {
-            const updated = [...prev, newShot]
-            updateDoc(doc(db, "projects", project.id), { screenshots: updated })
-            return updated
-          })
+          const updated = [...screenshots, newShot]
+          // Write DB first — if this fails we clean up the storage file
+          await updateDoc(doc(db, "projects", project.id), { screenshots: updated })
+          setScreenshots(updated)
+        } catch (err) {
+          console.error("Screenshot save failed:", err)
+          try { await deleteObject(ref(storage, path)) } catch { /* already gone */ }
+        } finally {
           setUploadProgress(null)
-        })
+        }
       }
     )
   }
@@ -208,6 +212,12 @@ function ProjectDetail({ project, entries, user, onBack, onEntryAdded, onStar, o
     if (deleting) return
     setDeleting(true)
     try {
+      // Delete all session log entries for this project
+      const entrySnap = await getDocs(
+        query(collection(db, "entries"), where("projectId", "==", project.id))
+      )
+      await Promise.all(entrySnap.docs.map(d => deleteDoc(doc(db, "entries", d.id))))
+      // Delete screenshots from storage
       for (const shot of screenshots) {
         try { await deleteObject(ref(storage, shot.storagePath)) } catch { /* already gone */ }
       }
@@ -416,7 +426,7 @@ function ProjectDetail({ project, entries, user, onBack, onEntryAdded, onStar, o
         ) : (
           <div className="danger-confirm">
             <p className="danger-confirm-text">
-              This will permanently delete <strong>{project.title}</strong> and all its screenshots. This cannot be undone.
+              This will permanently delete <strong>{project.title}</strong>, all its session logs, and screenshots. This cannot be undone.
             </p>
             <div className="danger-confirm-actions">
               <button className="btn-ghost" onClick={() => setConfirmDelete(false)}>Cancel</button>

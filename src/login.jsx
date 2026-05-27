@@ -3,6 +3,7 @@ import { auth } from "./firebase"
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth"
 import { db } from "./firebase"
 import { doc, setDoc, serverTimestamp } from "firebase/firestore"
+import { friendlyError } from "./utils"
 import "./login.css"
 
 function Loginscreen() {
@@ -21,7 +22,7 @@ function Loginscreen() {
   }
 
   const signup = async () => {
-    if (!username || !email || !password) {
+    if (!username.trim() || !email || !password) {
       setError("All fields are required.")
       return
     }
@@ -29,14 +30,13 @@ function Loginscreen() {
     setError("")
     try {
       const credential = await createUserWithEmailAndPassword(auth, email, password)
-      const uid = credential.user.uid
-      await setDoc(doc(db, "users", uid), {
-        username,
+      await setDoc(doc(db, "users", credential.user.uid), {
+        username: username.trim(),
         email,
         createdAt: serverTimestamp(),
       })
     } catch (err) {
-      setError(err.message)
+      setError(friendlyError(err.code))
     } finally {
       setLoading(false)
     }
@@ -52,11 +52,13 @@ function Loginscreen() {
     try {
       await signInWithEmailAndPassword(auth, email, password)
     } catch (err) {
-      setError(err.message)
+      setError(friendlyError(err.code))
     } finally {
       setLoading(false)
     }
   }
+
+  const onKey = (fn) => (e) => { if (e.key === "Enter") fn() }
 
   if (view === "signup") {
     return (
@@ -65,29 +67,18 @@ function Loginscreen() {
         {error && <p className="auth-error">{error}</p>}
         <div className="form-group">
           <label>Username</label>
-          <input
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            placeholder="Choose a username"
-          />
+          <input value={username} onChange={e => setUsername(e.target.value)}
+            placeholder="Choose a username" onKeyDown={onKey(signup)} />
         </div>
         <div className="form-group">
           <label>Email</label>
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="your@email.com"
-          />
+          <input type="email" value={email} onChange={e => setEmail(e.target.value)}
+            placeholder="your@email.com" onKeyDown={onKey(signup)} />
         </div>
         <div className="form-group">
           <label>Password</label>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="Min. 6 characters"
-          />
+          <input type="password" value={password} onChange={e => setPassword(e.target.value)}
+            placeholder="Min. 6 characters" onKeyDown={onKey(signup)} />
         </div>
         <button onClick={signup} disabled={loading} className="btn-primary">
           {loading ? "Creating account…" : "Create Account"}
@@ -107,21 +98,13 @@ function Loginscreen() {
         {error && <p className="auth-error">{error}</p>}
         <div className="form-group">
           <label>Email</label>
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="your@email.com"
-          />
+          <input type="email" value={email} onChange={e => setEmail(e.target.value)}
+            placeholder="your@email.com" onKeyDown={onKey(login)} />
         </div>
         <div className="form-group">
           <label>Password</label>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="Your password"
-          />
+          <input type="password" value={password} onChange={e => setPassword(e.target.value)}
+            placeholder="Your password" onKeyDown={onKey(login)} />
         </div>
         <button onClick={login} disabled={loading} className="btn-primary">
           {loading ? "Signing in…" : "Sign In"}

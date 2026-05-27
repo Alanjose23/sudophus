@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { db } from "./firebase"
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore"
 import { ROADMAPS, TOPIC_ICONS } from "./roadmapData"
@@ -127,7 +127,11 @@ function UserKitBanner({ user, roadmap, masteredCount, practicedCount, totalTopi
           )}
           <span className="kit-stat kit-stat--total">of {totalTopics}</span>
         </div>
-        <button className="btn-ghost-sm" onClick={onChangePath}>Switch kit</button>
+        <button className="btn-ghost-sm" onClick={() => {
+          if (window.confirm("Switch pathway? Your progress is saved and you can return to this pathway anytime.")) {
+            onChangePath()
+          }
+        }}>Switch kit</button>
       </div>
     </div>
   )
@@ -138,7 +142,9 @@ function Roadmap({ user, onPathwaySet }) {
   const [activePathway, setActivePathway] = useState(null)
   // progress shape: { [pathwayId]: { [topicId]: 'need_practice'|'practiced'|'mastered' } }
   const [progress, setProgress] = useState({})
-  const savingRef = useRef(false)
+  const savingRef      = useRef(false)
+  const saveTimerRef   = useRef(null)
+  const latestProgRef  = useRef({})
 
   useEffect(() => {
     getDoc(doc(db, "users", user.uid)).then(snap => {
@@ -164,16 +170,19 @@ function Roadmap({ user, onPathwaySet }) {
     })
   }, [user.uid])
 
-  const persist = async (pathway, prog) => {
+  const persist = useCallback(async (pathway, prog) => {
     if (savingRef.current) return
     savingRef.current = true
-    await setDoc(
-      doc(db, "users", user.uid),
-      { activePathway: pathway, progress: prog, updatedAt: serverTimestamp() },
-      { merge: true }
-    )
-    savingRef.current = false
-  }
+    try {
+      await setDoc(
+        doc(db, "users", user.uid),
+        { activePathway: pathway, progress: prog, updatedAt: serverTimestamp() },
+        { merge: true }
+      )
+    } finally {
+      savingRef.current = false
+    }
+  }, [user.uid])
 
   const handleSelectPathway = async id => {
     setActivePathway(id)
@@ -182,17 +191,20 @@ function Roadmap({ user, onPathwaySet }) {
     onPathwaySet?.(id)
   }
 
-  const handleSetStatus = async (topicId, newStatus) => {
-    const pathwayStatus = { ...(progress[activePathway] ?? {}) }
-    if (newStatus === null) {
-      delete pathwayStatus[topicId]
-    } else {
-      pathwayStatus[topicId] = newStatus
-    }
-    const updated = { ...progress, [activePathway]: pathwayStatus }
-    setProgress(updated)
-    await persist(activePathway, updated)
-  }
+  const handleSetStatus = useCallback((topicId, newStatus) => {
+    setProgress(prev => {
+      const pathwayStatus = { ...(prev[activePathway] ?? {}) }
+      if (newStatus === null) delete pathwayStatus[topicId]
+      else pathwayStatus[topicId] = newStatus
+      const updated = { ...prev, [activePathway]: pathwayStatus }
+      latestProgRef.current = updated
+      return updated
+    })
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
+    saveTimerRef.current = setTimeout(() => {
+      persist(activePathway, latestProgRef.current)
+    }, 600)
+  }, [activePathway, persist])
 
   if (view === "loading") {
     return (
