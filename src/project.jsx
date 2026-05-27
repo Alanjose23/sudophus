@@ -1,12 +1,15 @@
 import { useState, useEffect } from "react"
 import { db, storage } from "./firebase"
 import {
-  collection, addDoc, getDocs, doc, updateDoc,
+  collection, addDoc, getDocs, doc, updateDoc, deleteDoc,
   query, where, serverTimestamp,
 } from "firebase/firestore"
 import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from "firebase/storage"
 import "./project.css"
 import { calcStreak, progressPct, progressColor } from "./projectHelpers"
+import { timeAgo, formatFull } from "./timeAgo"
+import { PROJECT_SUGGESTIONS, SUGGESTION_SOURCES } from "./projectSuggestions"
+import { ROADMAPS } from "./roadmapData"
 
 function ProjectCard({ project, entryCount, streak, onClick, onStar }) {
   const pct = progressPct(entryCount, project.target)
@@ -48,6 +51,14 @@ function ProjectCard({ project, entryCount, streak, onClick, onStar }) {
           <div className="proj-tags">
             {project.tags.map(t => <span key={t} className="tag">{t}</span>)}
           </div>
+        )}
+        {project.createdAt && (
+          <span
+            className="proj-card-created"
+            title={formatFull(project.createdAt?.toDate ? project.createdAt.toDate() : project.createdAt)}
+          >
+            Created {timeAgo(project.createdAt?.toDate ? project.createdAt.toDate() : project.createdAt)}
+          </span>
         )}
       </div>
     </div>
@@ -159,11 +170,13 @@ function CreateProjectForm({ user, onCreated, onCancel }) {
   )
 }
 
-function ProjectDetail({ project, entries, user, onBack, onEntryAdded, onStar }) {
+function ProjectDetail({ project, entries, user, onBack, onEntryAdded, onStar, onDelete }) {
   const [text, setText] = useState("")
   const [saving, setSaving] = useState(false)
   const [screenshots, setScreenshots] = useState(project.screenshots ?? [])
   const [uploadProgress, setUploadProgress] = useState(null)
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const pct = progressPct(entries.length, project.target)
   const color = progressColor(pct)
   const streak = calcStreak(entries)
@@ -190,6 +203,22 @@ function ProjectDetail({ project, entries, user, onBack, onEntryAdded, onStar })
         })
       }
     )
+  }
+
+  const handleDeleteProject = async () => {
+    if (deleting) return
+    setDeleting(true)
+    try {
+      for (const shot of screenshots) {
+        try { await deleteObject(ref(storage, shot.storagePath)) } catch { /* already gone */ }
+      }
+      await deleteDoc(doc(db, "projects", project.id))
+      onDelete(project.id)
+    } catch (err) {
+      console.error(err)
+      setDeleting(false)
+      setConfirmDelete(false)
+    }
   }
 
   const handleDeleteScreenshot = async shot => {
@@ -222,12 +251,7 @@ function ProjectDetail({ project, entries, user, onBack, onEntryAdded, onStar })
     }
   }
 
-  const formatDate = d => {
-    const date = d?.toDate ? d.toDate() : new Date(d)
-    return new Intl.DateTimeFormat("en-US", {
-      month: "short", day: "numeric", year: "numeric",
-    }).format(date)
-  }
+  const toDate = d => d?.toDate ? d.toDate() : new Date(d)
 
   return (
     <div className="detail-container">
@@ -307,7 +331,19 @@ function ProjectDetail({ project, entries, user, onBack, onEntryAdded, onStar })
         {entries.map(e => (
           <div key={e.id} className="entry-item" data-testid="entry-item">
             <p className="entry-text">{e.text}</p>
-            <span className="entry-date">{formatDate(e.createdAt)}</span>
+            {e.createdAt && (
+              <div className="entry-timestamp">
+                <span
+                  className="entry-time-relative"
+                  title={formatFull(toDate(e.createdAt))}
+                >
+                  {timeAgo(toDate(e.createdAt))}
+                </span>
+                <span className="entry-time-absolute">
+                  {formatFull(toDate(e.createdAt))}
+                </span>
+              </div>
+            )}
           </div>
         ))}
       </div>
@@ -368,11 +404,150 @@ function ProjectDetail({ project, entries, user, onBack, onEntryAdded, onStar })
           <p className="screenshots-empty">No screenshots yet. Document your build visually.</p>
         )}
       </div>
+
+      <div className="danger-zone">
+        <h4 className="danger-zone-title">Danger Zone</h4>
+        {!confirmDelete ? (
+          <button
+            className="btn-danger"
+            onClick={() => setConfirmDelete(true)}
+          >
+            Delete Project
+          </button>
+        ) : (
+          <div className="danger-confirm">
+            <p className="danger-confirm-text">
+              This will permanently delete <strong>{project.title}</strong> and all its screenshots. This cannot be undone.
+            </p>
+            <div className="danger-confirm-actions">
+              <button className="btn-ghost" onClick={() => setConfirmDelete(false)}>Cancel</button>
+              <button
+                className="btn-danger"
+                onClick={handleDeleteProject}
+                disabled={deleting}
+              >
+                {deleting ? "Deleting…" : "Yes, delete it"}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   )
 }
 
-function Project({ user }) {
+const DIFFICULTY_LABELS = { beginner: "Beginner", intermediate: "Intermediate", advanced: "Advanced" }
+
+function SuggestionCard({ item }) {
+  return (
+    <div className="sugg-card">
+      <div className="sugg-card-top">
+        <span className={`sugg-difficulty sugg-difficulty--${item.difficulty}`}>
+          {DIFFICULTY_LABELS[item.difficulty]}
+        </span>
+        <span className="sugg-source">{item.source.name}</span>
+      </div>
+      <h4 className="sugg-title">{item.title}</h4>
+      <p className="sugg-desc">{item.description}</p>
+      <div className="sugg-card-footer">
+        <div className="sugg-tags">
+          {item.tags.map(t => <span key={t} className="sugg-tag">{t}</span>)}
+        </div>
+        <a
+          className="sugg-link"
+          href={item.source.url}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          View resource ↗
+        </a>
+      </div>
+    </div>
+  )
+}
+
+const SHOWN_COUNT = 4
+
+function shuffle(arr) {
+  const a = [...arr]
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]]
+  }
+  return a
+}
+
+function SuggestionsPanel({ pathwayId }) {
+  const [open, setOpen] = useState(true)
+  const [displayed, setDisplayed] = useState([])
+  const [fading, setFading] = useState(false)
+
+  const suggestions = PROJECT_SUGGESTIONS[pathwayId]
+  const roadmap = ROADMAPS[pathwayId]
+
+  useEffect(() => {
+    if (suggestions) setDisplayed(shuffle(suggestions).slice(0, SHOWN_COUNT))
+  }, [pathwayId])
+
+  if (!suggestions || !roadmap) return null
+
+  const handleShuffle = e => {
+    e.stopPropagation()
+    setFading(true)
+    setTimeout(() => {
+      setDisplayed(shuffle(suggestions).slice(0, SHOWN_COUNT))
+      setFading(false)
+    }, 200)
+  }
+
+  return (
+    <div className="sugg-panel">
+      <div className="sugg-panel-header" onClick={() => setOpen(o => !o)} role="button" tabIndex={0}>
+        <div className="sugg-panel-title-row">
+          <span className="sugg-panel-icon">{roadmap.icon}</span>
+          <h3 className="sugg-panel-title">
+            Project ideas for your {roadmap.title} journey
+          </h3>
+        </div>
+        <div className="sugg-panel-right">
+          <span className="sugg-panel-count">
+            {open ? `Showing ${displayed.length} of ${suggestions.length}` : `${suggestions.length} ideas`}
+          </span>
+          <span className="sugg-panel-chevron">{open ? "▲" : "▼"}</span>
+        </div>
+      </div>
+
+      {open && (
+        <>
+          <div className="sugg-panel-actions">
+            <p className="sugg-panel-sub">
+              Hands-on projects curated from{" "}
+              {[...new Set(suggestions.map(s => s.source))].slice(0, 3).map((src, i, arr) => (
+                <span key={src.url}>
+                  <a className="sugg-src-link" href={src.url} target="_blank" rel="noopener noreferrer">
+                    {src.name}
+                  </a>
+                  {i < arr.length - 1 ? ", " : ""}
+                </span>
+              ))}
+              {" "}and more.
+            </p>
+            <button className="sugg-shuffle-btn" onClick={handleShuffle} title="Get new ideas">
+              🔀 New ideas
+            </button>
+          </div>
+          <div className={`sugg-grid${fading ? " sugg-grid--fading" : ""}`}>
+            {displayed.map(item => (
+              <SuggestionCard key={item.title} item={item} />
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
+function Project({ user, userPathway }) {
   const [projects, setProjects] = useState([])
   const [allEntries, setAllEntries] = useState([])
   const [loading, setLoading] = useState(true)
@@ -407,6 +582,13 @@ function Project({ user }) {
     await updateDoc(doc(db, "projects", proj.id), { starred: next })
   }
 
+  const handleDeleteProject = id => {
+    setProjects(ps => ps.filter(p => p.id !== id))
+    setAllEntries(es => es.filter(e => e.projectId !== id))
+    setView("list")
+    setActiveProject(null)
+  }
+
   if (loading) {
     return (
       <div className="proj-loading" data-testid="proj-loading">
@@ -439,6 +621,7 @@ function Project({ user }) {
         onBack={() => { setView("list"); setActiveProject(null) }}
         onEntryAdded={entry => setAllEntries(prev => [entry, ...prev])}
         onStar={() => handleStar(activeProject)}
+        onDelete={handleDeleteProject}
       />
     )
   }
@@ -473,6 +656,14 @@ function Project({ user }) {
               onStar={() => handleStar(p)}
             />
           ))}
+        </div>
+      )}
+
+      {userPathway && <SuggestionsPanel pathwayId={userPathway} />}
+      {!userPathway && (
+        <div className="sugg-no-pathway">
+          <span className="sugg-no-pathway-icon">🗺️</span>
+          <p>Set a <strong>Learning Kit</strong> pathway to get curated project ideas here.</p>
         </div>
       )}
     </div>

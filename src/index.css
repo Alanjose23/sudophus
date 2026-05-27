@@ -4,8 +4,8 @@
   font-weight: 400;
 
   color-scheme: dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #0f172a;
+  color: #d4e8d8;
+  background-color: #060b07;
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -13,31 +13,27 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
-*, *::before, *::after {
-  box-sizing: border-box;
-}
+*, *::before, *::after { box-sizing: border-box; }
 
 body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
-  background: #0f172a;
+  background: #060b07;
+  /* subtle scale-dot texture across the entire app */
+  background-image: radial-gradient(circle, rgba(16, 185, 129, 0.045) 1px, transparent 1px);
+  background-size: 28px 28px;
 }
 
-h1, h2, h3, h4 {
-  line-height: 1.2;
-}
-
+h1, h2, h3, h4 { line-height: 1.2; }
 h1 { font-size: 3rem; }
 
 a {
   font-weight: 500;
-  color: #6366f1;
+  color: #10b981;
   text-decoration: inherit;
 }
-a:hover {
-  color: #818cf8;
-}
+a:hover { color: #34d399; }
 
 button {
   border-radius: 8px;
@@ -46,18 +42,16 @@ button {
   font-size: 1em;
   font-weight: 500;
   font-family: inherit;
-  background-color: #1e293b;
-  color: rgba(255, 255, 255, 0.87);
+  background-color: #0d1a0f;
+  color: #d4e8d8;
   cursor: pointer;
   transition: border-color 0.2s;
 }
 
-button:hover {
-  border-color: #6366f1;
-}
+button:hover { border-color: #10b981; }
 
 button:focus,
 button:focus-visible {
-  outline: 3px solid rgba(99, 102, 241, 0.4);
+  outline: 3px solid rgba(16, 185, 129, 0.35);
   outline-offset: 2px;
 }

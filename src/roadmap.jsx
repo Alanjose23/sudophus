@@ -2,7 +2,38 @@ import { useState, useEffect, useRef } from "react"
 import { db } from "./firebase"
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore"
 import { ROADMAPS } from "./roadmapData"
+import { TOPIC_ICONS } from "./topicIcons"
 import "./roadmap.css"
+
+const STATUSES = ["need_practice", "practiced", "mastered"]
+
+const STATUS_LABELS = {
+  need_practice: "Need Practice",
+  practiced: "Practiced",
+  mastered: "Mastered",
+}
+
+// Mastered = full credit, practiced = half credit, need_practice = 0
+function weightedDone(statusMap, topics) {
+  let score = 0
+  for (const t of topics) {
+    const s = statusMap[t.id]
+    if (s === "mastered") score += 1
+    else if (s === "practiced") score += 0.5
+  }
+  return score
+}
+
+function groupStats(statusMap, topics) {
+  let mastered = 0, practiced = 0, needPractice = 0
+  for (const t of topics) {
+    const s = statusMap[t.id]
+    if (s === "mastered") mastered++
+    else if (s === "practiced") practiced++
+    else if (s === "need_practice") needPractice++
+  }
+  return { mastered, practiced, needPractice }
+}
 
 function PathwayCard({ roadmap, onSelect }) {
   const topicCount = roadmap.groups.reduce((n, g) => n + g.topics.length, 0)
@@ -19,30 +50,90 @@ function PathwayCard({ roadmap, onSelect }) {
   )
 }
 
-function TopicGroup({ group, completed, onToggle }) {
-  const done = group.topics.filter(t => completed.has(t.id)).length
-  const pct = Math.round((done / group.topics.length) * 100)
+function TopicGroup({ group, statusMap, onSetStatus }) {
+  const allTopics = group.topics
+  const weighted = weightedDone(statusMap, allTopics)
+  const pct = Math.round((weighted / allTopics.length) * 100)
+  const { mastered, practiced, needPractice } = groupStats(statusMap, allTopics)
+
   return (
     <div className="topic-group">
       <div className="topic-group-header">
         <span className="topic-group-label">{group.label}</span>
-        <span className="topic-group-count">{done} / {group.topics.length}</span>
+        <div className="topic-group-counts">
+          {mastered > 0 && (
+            <span className="tgc tgc--mastered">{mastered} mastered</span>
+          )}
+          {practiced > 0 && (
+            <span className="tgc tgc--practiced">{practiced} practiced</span>
+          )}
+          {needPractice > 0 && (
+            <span className="tgc tgc--need">{needPractice} flagged</span>
+          )}
+          <span className="tgc tgc--total">{allTopics.length} topics</span>
+        </div>
       </div>
       <div className="topic-group-bar">
         <div className="topic-group-fill" style={{ width: `${pct}%` }} />
       </div>
       <div className="topic-list">
-        {group.topics.map(t => (
-          <label key={t.id} className={`topic-item${completed.has(t.id) ? " done" : ""}`}>
-            <input
-              type="checkbox"
-              checked={completed.has(t.id)}
-              onChange={() => onToggle(t.id)}
-              className="topic-checkbox"
-            />
-            <span className="topic-label">{t.label}</span>
-          </label>
-        ))}
+        {allTopics.map(t => {
+          const current = statusMap[t.id] ?? null
+          return (
+            <div
+              key={t.id}
+              className={`topic-row${current === "mastered" ? " topic-row--mastered" : ""}`}
+            >
+              <div className="topic-row-left">
+                {TOPIC_ICONS[t.id] && (
+                  <span className="topic-icon" aria-hidden="true">{TOPIC_ICONS[t.id]}</span>
+                )}
+                <span className={`topic-label${current === "mastered" ? " done" : ""}`}>
+                  {t.label}
+                </span>
+              </div>
+              <div className="topic-pills" role="group" aria-label={`Status for ${t.label}`}>
+                {STATUSES.map(s => (
+                  <button
+                    key={s}
+                    className={`topic-pill topic-pill--${s}${current === s ? " active" : ""}`}
+                    onClick={() => onSetStatus(t.id, current === s ? null : s)}
+                    title={current === s ? `Remove "${STATUS_LABELS[s]}"` : STATUS_LABELS[s]}
+                  >
+                    {STATUS_LABELS[s]}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+function UserKitBanner({ user, roadmap, masteredCount, practicedCount, totalTopics, onChangePath }) {
+  const initials = (user.email ?? "?")[0].toUpperCase()
+  return (
+    <div className="kit-banner">
+      <div className="kit-banner-left">
+        <div className="kit-avatar">{initials}</div>
+        <div className="kit-user-info">
+          <span className="kit-user-email">{user.email}</span>
+          <span className="kit-user-pathway">
+            {roadmap.icon} {roadmap.title}
+          </span>
+        </div>
+      </div>
+      <div className="kit-banner-right">
+        <div className="kit-banner-stats">
+          <span className="kit-stat kit-stat--mastered">{masteredCount} mastered</span>
+          {practicedCount > 0 && (
+            <span className="kit-stat kit-stat--practiced">{practicedCount} practiced</span>
+          )}
+          <span className="kit-stat kit-stat--total">of {totalTopics}</span>
+        </div>
+        <button className="btn-ghost-sm" onClick={onChangePath}>Switch kit</button>
       </div>
     </div>
   )
@@ -51,6 +142,7 @@ function TopicGroup({ group, completed, onToggle }) {
 function Roadmap({ user, onPathwaySet }) {
   const [view, setView] = useState("loading")
   const [activePathway, setActivePathway] = useState(null)
+  // progress shape: { [pathwayId]: { [topicId]: 'need_practice'|'practiced'|'mastered' } }
   const [progress, setProgress] = useState({})
   const savingRef = useRef(false)
 
@@ -58,8 +150,15 @@ function Roadmap({ user, onPathwaySet }) {
     getDoc(doc(db, "users", user.uid)).then(snap => {
       const data = snap.data() ?? {}
       const prog = {}
-      for (const [pid, topics] of Object.entries(data.progress ?? {})) {
-        prog[pid] = new Set(topics)
+      for (const [pid, val] of Object.entries(data.progress ?? {})) {
+        if (Array.isArray(val)) {
+          // backward-compat: old format stored an array of completed topic IDs
+          const obj = {}
+          for (const id of val) obj[id] = "mastered"
+          prog[pid] = obj
+        } else {
+          prog[pid] = val ?? {}
+        }
       }
       setProgress(prog)
       if (data.activePathway && ROADMAPS[data.activePathway]) {
@@ -74,13 +173,9 @@ function Roadmap({ user, onPathwaySet }) {
   const persist = async (pathway, prog) => {
     if (savingRef.current) return
     savingRef.current = true
-    const serialized = {}
-    for (const [pid, topics] of Object.entries(prog)) {
-      serialized[pid] = [...topics]
-    }
     await setDoc(
       doc(db, "users", user.uid),
-      { activePathway: pathway, progress: serialized, updatedAt: serverTimestamp() },
+      { activePathway: pathway, progress: prog, updatedAt: serverTimestamp() },
       { merge: true }
     )
     savingRef.current = false
@@ -93,12 +188,14 @@ function Roadmap({ user, onPathwaySet }) {
     onPathwaySet?.(id)
   }
 
-  const handleToggle = async topicId => {
-    const updated = { ...progress }
-    const topics = new Set(updated[activePathway] ?? [])
-    if (topics.has(topicId)) topics.delete(topicId)
-    else topics.add(topicId)
-    updated[activePathway] = topics
+  const handleSetStatus = async (topicId, newStatus) => {
+    const pathwayStatus = { ...(progress[activePathway] ?? {}) }
+    if (newStatus === null) {
+      delete pathwayStatus[topicId]
+    } else {
+      pathwayStatus[topicId] = newStatus
+    }
+    const updated = { ...progress, [activePathway]: pathwayStatus }
     setProgress(updated)
     await persist(activePathway, updated)
   }
@@ -140,13 +237,26 @@ function Roadmap({ user, onPathwaySet }) {
   }
 
   const roadmap = ROADMAPS[activePathway]
-  const completed = progress[activePathway] ?? new Set()
-  const totalTopics = roadmap.groups.reduce((n, g) => n + g.topics.length, 0)
-  const doneTopics = completed.size
-  const overallPct = Math.round((doneTopics / totalTopics) * 100)
+  const statusMap = progress[activePathway] ?? {}
+  const allTopics = roadmap.groups.flatMap(g => g.topics)
+  const totalTopics = allTopics.length
+  const masteredCount = allTopics.filter(t => statusMap[t.id] === "mastered").length
+  const practicedCount = allTopics.filter(t => statusMap[t.id] === "practiced").length
+  const needCount = allTopics.filter(t => statusMap[t.id] === "need_practice").length
+  const weighted = weightedDone(statusMap, allTopics)
+  const overallPct = Math.round((weighted / totalTopics) * 100)
 
   return (
     <div className="roadmap-page">
+      <UserKitBanner
+        user={user}
+        roadmap={roadmap}
+        masteredCount={masteredCount}
+        practicedCount={practicedCount}
+        totalTopics={totalTopics}
+        onChangePath={() => setView("select")}
+      />
+
       <div className="roadmap-header">
         <div>
           <div className="roadmap-pathway-label">Active Pathway</div>
@@ -163,15 +273,26 @@ function Roadmap({ user, onPathwaySet }) {
           >
             roadmap.sh ↗
           </a>
-          <button className="btn-ghost" onClick={() => setView("select")}>
-            Change path
-          </button>
         </div>
       </div>
 
       <div className="roadmap-overview">
         <div className="roadmap-stats">
-          <span className="roadmap-done">{doneTopics} / {totalTopics} topics</span>
+          <div className="roadmap-stat-pills">
+            <span className="roadmap-stat-chip roadmap-stat-chip--mastered">
+              ✓ {masteredCount} mastered
+            </span>
+            {practicedCount > 0 && (
+              <span className="roadmap-stat-chip roadmap-stat-chip--practiced">
+                ◑ {practicedCount} practiced
+              </span>
+            )}
+            {needCount > 0 && (
+              <span className="roadmap-stat-chip roadmap-stat-chip--need">
+                ⚑ {needCount} flagged
+              </span>
+            )}
+          </div>
           <span className="roadmap-pct" data-testid="overall-pct">{overallPct}%</span>
         </div>
         <div className="roadmap-overall-bar">
@@ -181,6 +302,9 @@ function Roadmap({ user, onPathwaySet }) {
             style={{ width: `${overallPct}%` }}
           />
         </div>
+        <p className="roadmap-overview-hint">
+          Mastered = full credit · Practiced = half credit · Need Practice = flagged for review
+        </p>
       </div>
 
       <div className="topic-groups">
@@ -188,8 +312,8 @@ function Roadmap({ user, onPathwaySet }) {
           <TopicGroup
             key={g.label}
             group={g}
-            completed={completed}
-            onToggle={handleToggle}
+            statusMap={statusMap}
+            onSetStatus={handleSetStatus}
           />
         ))}
       </div>

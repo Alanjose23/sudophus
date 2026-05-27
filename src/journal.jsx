@@ -1,10 +1,8 @@
 import { useState, useEffect } from 'react'
 import "./journal.css"
 import { db } from "./firebase"
-import { collection, addDoc, getDocs, query, where, serverTimestamp } from "firebase/firestore"
-
-const formatDate = (date) =>
-  new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeStyle: 'short' }).format(date)
+import { collection, addDoc, getDocs, query, where, serverTimestamp, deleteDoc, doc } from "firebase/firestore"
+import { timeAgo, formatFull } from "./timeAgo"
 
 function Journal({ entryC, user }) {
   const [entries, setEntries] = useState([])
@@ -19,10 +17,10 @@ function Journal({ entryC, user }) {
         const q = query(collection(db, "entries"), where("uid", "==", user.uid))
         const snapshot = await getDocs(q)
         const loaded = snapshot.docs
-          .map(doc => ({
-            id: doc.id,
-            text: doc.data().text,
-            createdAt: doc.data().createdAt?.toDate() ?? null,
+          .map(d => ({
+            id: d.id,
+            text: d.data().text,
+            createdAt: d.data().createdAt?.toDate() ?? null,
           }))
           .sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0))
         setEntries(loaded)
@@ -51,6 +49,15 @@ function Journal({ entryC, user }) {
       console.error(err)
     } finally {
       setSaving(false)
+    }
+  }
+
+  const deleteEntry = async (id) => {
+    setEntries(prev => prev.filter(e => e.id !== id))
+    try {
+      await deleteDoc(doc(db, "entries", id))
+    } catch (err) {
+      console.error(err)
     }
   }
 
@@ -102,10 +109,30 @@ function Journal({ entryC, user }) {
         ) : (
           entries.map((entry) => (
             <div className="entry-item" key={entry.id}>
-              <p>{entry.text}</p>
-              {entry.createdAt && (
-                <span className="entry-meta">{formatDate(entry.createdAt)}</span>
-              )}
+              <div className="entry-item-body">
+                <p>{entry.text}</p>
+                {entry.createdAt && (
+                  <div className="entry-timestamp">
+                    <span
+                      className="entry-time-relative"
+                      title={formatFull(entry.createdAt)}
+                    >
+                      {timeAgo(entry.createdAt)}
+                    </span>
+                    <span className="entry-time-absolute">
+                      {formatFull(entry.createdAt)}
+                    </span>
+                  </div>
+                )}
+              </div>
+              <button
+                className="entry-delete"
+                onClick={() => deleteEntry(entry.id)}
+                title="Delete entry"
+                aria-label="Delete entry"
+              >
+                ×
+              </button>
             </div>
           ))
         )}
