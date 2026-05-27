@@ -4,12 +4,11 @@ import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore"
 import { ROADMAPS, TOPIC_ICONS } from "./roadmapData"
 import "./roadmap.css"
 
-const STATUSES = ["need_practice", "practiced", "mastered"]
+const STATUSES = ["practiced", "mastered"]
 
 const STATUS_LABELS = {
-  need_practice: "Need Practice",
   practiced: "Practiced",
-  mastered: "Mastered",
+  mastered:  "Mastered",
 }
 
 // Mastered = full credit, practiced = half credit, need_practice = 0
@@ -24,14 +23,13 @@ function weightedDone(statusMap, topics) {
 }
 
 function groupStats(statusMap, topics) {
-  let mastered = 0, practiced = 0, needPractice = 0
+  let mastered = 0, practiced = 0
   for (const t of topics) {
     const s = statusMap[t.id]
     if (s === "mastered") mastered++
     else if (s === "practiced") practiced++
-    else if (s === "need_practice") needPractice++
   }
-  return { mastered, practiced, needPractice }
+  return { mastered, practiced }
 }
 
 function PathwayCard({ roadmap, onSelect }) {
@@ -53,7 +51,7 @@ function TopicGroup({ group, statusMap, onSetStatus }) {
   const allTopics = group.topics
   const weighted = weightedDone(statusMap, allTopics)
   const pct = Math.round((weighted / allTopics.length) * 100)
-  const { mastered, practiced, needPractice } = groupStats(statusMap, allTopics)
+  const { mastered, practiced } = groupStats(statusMap, allTopics)
 
   return (
     <div className="topic-group">
@@ -65,9 +63,6 @@ function TopicGroup({ group, statusMap, onSetStatus }) {
           )}
           {practiced > 0 && (
             <span className="tgc tgc--practiced">{practiced} practiced</span>
-          )}
-          {needPractice > 0 && (
-            <span className="tgc tgc--need">{needPractice} flagged</span>
           )}
           <span className="tgc tgc--total">{allTopics.length} topics</span>
         </div>
@@ -241,7 +236,6 @@ function Roadmap({ user, onPathwaySet }) {
   const totalTopics = allTopics.length
   const masteredCount = allTopics.filter(t => statusMap[t.id] === "mastered").length
   const practicedCount = allTopics.filter(t => statusMap[t.id] === "practiced").length
-  const needCount = allTopics.filter(t => statusMap[t.id] === "need_practice").length
   const weighted = weightedDone(statusMap, allTopics)
   const overallPct = Math.round((weighted / totalTopics) * 100)
 
@@ -286,12 +280,7 @@ function Roadmap({ user, onPathwaySet }) {
                 ◑ {practicedCount} practiced
               </span>
             )}
-            {needCount > 0 && (
-              <span className="roadmap-stat-chip roadmap-stat-chip--need">
-                ⚑ {needCount} flagged
-              </span>
-            )}
-          </div>
+            </div>
           <span className="roadmap-pct" data-testid="overall-pct">{overallPct}%</span>
         </div>
         <div className="roadmap-overall-bar">
@@ -302,7 +291,7 @@ function Roadmap({ user, onPathwaySet }) {
           />
         </div>
         <p className="roadmap-overview-hint">
-          Mastered = full credit · Practiced = half credit · Need Practice = flagged for review
+          Mastered = full credit · Practiced = half credit · Unset = not yet started
         </p>
       </div>
 
