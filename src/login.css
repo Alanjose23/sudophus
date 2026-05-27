@@ -2,20 +2,25 @@
   max-width: 420px;
   margin: 3rem auto;
   padding: 2.5rem 2.25rem;
-  background: #1e293b;
-  border: 1px solid #334155;
-  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 24px;
   text-align: center;
+  box-shadow: 0 0 100px rgba(167, 139, 113, 0.08);
 }
 
 .auth-card h2 {
   margin: 0 0 0.5rem;
+  font-family: 'Playfair Display', serif;
   font-size: 1.75rem;
-  color: #f1f5f9;
+  font-style: italic;
+  color: rgba(255, 255, 255, 0.9);
 }
 
 .auth-subtitle {
-  color: #64748b;
+  color: rgba(255, 255, 255, 0.4);
   font-size: 0.9rem;
   line-height: 1.55;
   margin: 0 0 2rem;
@@ -30,43 +35,41 @@
 .form-group label {
   display: block;
   margin-bottom: 0.35rem;
-  font-size: 0.8rem;
-  color: #94a3b8;
-  font-weight: 500;
-  letter-spacing: 0.03em;
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.4);
+  font-weight: 600;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
 }
 
 .form-group input {
   width: 100%;
   padding: 0.65rem 0.9rem;
-  background: #0f172a;
-  border: 1px solid #334155;
-  border-radius: 8px;
-  color: #f1f5f9;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  color: rgba(255, 255, 255, 0.9);
   font-size: 0.95rem;
   font-family: inherit;
   outline: none;
   box-sizing: border-box;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  transition: border-color 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s;
 }
 
 .form-group input:focus {
-  border-color: #6366f1;
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+  border-color: rgba(167, 139, 113, 0.5);
+  box-shadow: 0 0 0 3px rgba(167, 139, 113, 0.1);
 }
 
-.form-group input::placeholder {
-  color: #475569;
-}
+.form-group input::placeholder { color: rgba(255, 255, 255, 0.2); }
 
 /* ── Error ──────────────────────────────── */
 .auth-error {
-  background: #1f0a0a;
-  border: 1px solid #7f1d1d;
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.25);
   color: #fca5a5;
   padding: 0.6rem 1rem;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 0.825rem;
   margin-bottom: 1.25rem;
   text-align: left;
@@ -85,16 +88,14 @@
 .auth-switch {
   margin-top: 1.5rem;
   font-size: 0.85rem;
-  color: #475569;
+  color: rgba(255, 255, 255, 0.3);
 }
 
 .auth-switch span {
-  color: #6366f1;
+  color: #a78b71;
   cursor: pointer;
   font-weight: 500;
+  transition: color 0.2s;
 }
 
-.auth-switch span:hover {
-  color: #818cf8;
-  text-decoration: underline;
-}
+.auth-switch span:hover { color: #e8d5b7; }

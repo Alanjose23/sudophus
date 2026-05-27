@@ -1,14 +1,9 @@
 import { useState, useEffect } from "react"
 import { auth, db } from "./firebase"
-import {
-  updatePassword,
-  reauthenticateWithCredential,
-  EmailAuthProvider,
-  verifyBeforeUpdateEmail,
-} from "firebase/auth"
 import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore"
 import { ROADMAPS } from "./roadmapData"
-import "./dashboard.css"
+import { PROJECT_SUGGESTIONS } from "./projectSuggestions"
+import "./App.css"
 
 const QUICK_LINKS = [
   { screen: "journal",  icon: "📓", label: "Journal",      desc: "Write & reflect"         },
@@ -17,41 +12,223 @@ const QUICK_LINKS = [
   { screen: "about",    icon: "🐍", label: "About",        desc: "The Sudophus story"       },
 ]
 
-function friendlyError(code) {
-  switch (code) {
-    case "auth/wrong-password":
-    case "auth/invalid-credential":   return "Incorrect current password."
-    case "auth/email-already-in-use": return "That email is already taken."
-    case "auth/invalid-email":        return "Invalid email address."
-    case "auth/weak-password":        return "Password must be at least 6 characters."
-    case "auth/too-many-requests":    return "Too many attempts — try again later."
-    case "auth/requires-recent-login":return "Re-enter your current password to continue."
-    default:                          return "Something went wrong. Try again."
+const TIERS = [
+  {
+    id:       "free",
+    name:     "Free",
+    monthly:  0,
+    annual:   0,
+    desc:     "Start your journey",
+    features: [
+      "Unlimited journal entries",
+      "Up to 5 projects",
+      "1 learning pathway",
+      "Project suggestions",
+    ],
+    cta:     "Current plan",
+    current: true,
+  },
+  {
+    id:      "builder",
+    name:    "Builder",
+    monthly: 7,
+    annual:  5,
+    desc:    "Serious builders",
+    popular: true,
+    features: [
+      "Everything in Free",
+      "Unlimited projects",
+      "All learning pathways",
+      "Priority suggestions",
+      "Export journal (CSV)",
+    ],
+    cta: "Upgrade",
+  },
+  {
+    id:      "master",
+    name:    "Master",
+    monthly: 18,
+    annual:  13,
+    desc:    "Professionals & teams",
+    features: [
+      "Everything in Builder",
+      "Team workspaces",
+      "Mentor review queue",
+      "Custom roadmaps",
+      "API access",
+    ],
+    cta: "Go Master",
+  },
+]
+
+const SHOWN_SUGG = 3
+
+function shuffleArr(arr) {
+  const a = [...arr]
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]]
   }
+  return a
 }
 
-function StatusMsg({ msg }) {
-  if (!msg) return null
-  return <div className={`dash-msg dash-msg--${msg.type}`}>{msg.text}</div>
+function AboutTab({ user, userData, stats, doneCount, totalTopics, donePct, roadmap, onNavigate }) {
+  const features = [
+    { icon: "📓", label: "Daily Journal",      desc: "Log reflections, bugs fixed, and wins" },
+    { icon: "🚀", label: "Project Tracker",    desc: "Showcase builds, track progress targets" },
+    { icon: "🗺️", label: "Learning Pathways", desc: "Curated roadmaps with skill checkpoints" },
+    { icon: "💡", label: "Smart Suggestions",  desc: "Project ideas matched to your pathway" },
+  ]
+  return (
+    <div className="dash-tab-body">
+      <h3 className="dash-section-title">What is Sudophus?</h3>
+      <p className="dash-section-sub">
+        Sudophus is your personal coding companion — a focused space to journal your
+        learning, track the projects you build, and follow structured pathways toward
+        mastery. No noise, no social feed — just you and your growth.
+      </p>
+
+      <div className="dash-about-stats">
+        <div className="dash-about-stat" onClick={() => onNavigate?.("journal")} role="button" tabIndex={0}>
+          <span className="dash-about-stat-val">{stats.entries}</span>
+          <span className="dash-about-stat-lbl">Journal entries written</span>
+        </div>
+        <div className="dash-about-stat" onClick={() => onNavigate?.("project")} role="button" tabIndex={0}>
+          <span className="dash-about-stat-val">{stats.projects}</span>
+          <span className="dash-about-stat-lbl">Projects tracked</span>
+        </div>
+        <div className="dash-about-stat" onClick={() => onNavigate?.("roadmap")} role="button" tabIndex={0}>
+          <span className="dash-about-stat-val">{totalTopics > 0 ? `${donePct}%` : "—"}</span>
+          <span className="dash-about-stat-lbl">
+            {roadmap ? `${roadmap.title} pathway` : "No pathway set"}
+          </span>
+        </div>
+      </div>
+
+      <div className="dash-about-features">
+        {features.map(f => (
+          <div key={f.label} className="dash-about-feature">
+            <span className="dash-about-feature-icon">{f.icon}</span>
+            <div>
+              <div className="dash-about-feature-name">{f.label}</div>
+              <div className="dash-about-feature-desc">{f.desc}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function PricingTab() {
+  const [annual, setAnnual] = useState(false)
+  return (
+    <div className="dash-tab-body">
+      <div className="dash-pricing-header">
+        <h3 className="dash-section-title" style={{ margin: 0 }}>Plans &amp; Pricing</h3>
+        <div className="dash-pricing-toggle" onClick={() => setAnnual(a => !a)} role="button" tabIndex={0} aria-label="Toggle billing period">
+          <span className={!annual ? "dash-toggle-active" : ""}>Monthly</span>
+          <div className={`dash-toggle-pill${annual ? " on" : ""}`}>
+            <div className="dash-toggle-knob" />
+          </div>
+          <span className={annual ? "dash-toggle-active" : ""}>Annual <span className="dash-toggle-save">−30%</span></span>
+        </div>
+      </div>
+      <div className="dash-pricing-grid">
+        {TIERS.map(tier => (
+          <div key={tier.id} className={`dash-tier${tier.popular ? " dash-tier--popular" : ""}`}>
+            {tier.popular && <div className="dash-tier-badge">Most Popular</div>}
+            <div className="dash-tier-name">{tier.name}</div>
+            <div className="dash-tier-price">
+              {tier.monthly === 0
+                ? <span className="dash-tier-amount">Free</span>
+                : <>
+                    <span className="dash-tier-amount">${annual ? tier.annual : tier.monthly}</span>
+                    <span className="dash-tier-period">/ mo</span>
+                  </>
+              }
+            </div>
+            <div className="dash-tier-desc">{tier.desc}</div>
+            <ul className="dash-tier-features">
+              {tier.features.map(f => (
+                <li key={f} className="dash-tier-feature">
+                  <span className="dash-tier-check">✓</span>{f}
+                </li>
+              ))}
+            </ul>
+            <button className={`dash-tier-cta${tier.current ? " dash-tier-cta--current" : ""}`} disabled={tier.current}>
+              {tier.cta}
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function SuggestionsTab({ pathway }) {
+  const pool = pathway ? (PROJECT_SUGGESTIONS[pathway] ?? []) : []
+  const [shown, setShown] = useState(() => shuffleArr(pool).slice(0, SHOWN_SUGG))
+
+  useEffect(() => {
+    setShown(shuffleArr(pool).slice(0, SHOWN_SUGG))
+  }, [pathway])
+
+  const shuffle = () => setShown(shuffleArr(pool).slice(0, SHOWN_SUGG))
+
+  if (!pathway) {
+    return (
+      <div className="dash-tab-body">
+        <div className="dash-sugg-empty">
+          <div className="dash-sugg-empty-icon">🗺️</div>
+          <p>Set a learning pathway to unlock project suggestions.</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (pool.length === 0) {
+    return (
+      <div className="dash-tab-body">
+        <div className="dash-sugg-empty">
+          <div className="dash-sugg-empty-icon">💡</div>
+          <p>No suggestions yet for this pathway.</p>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="dash-tab-body">
+      <div className="dash-sugg-header">
+        <div>
+          <h3 className="dash-section-title" style={{ margin: "0 0 0.2rem" }}>Project Suggestions</h3>
+          <p className="dash-section-sub" style={{ margin: 0 }}>Curated ideas for your active pathway.</p>
+        </div>
+        <button className="btn-ghost-sm" onClick={shuffle}>↻ Shuffle</button>
+      </div>
+      <div className="dash-sugg-list">
+        {shown.map((s, i) => (
+          <a key={i} className="dash-sugg-item" href={s.url} target="_blank" rel="noopener noreferrer">
+            <div className="dash-sugg-item-top">
+              <span className="dash-sugg-title">{s.title}</span>
+              <span className={`dash-sugg-diff dash-sugg-diff--${(s.difficulty ?? "beginner").toLowerCase()}`}>
+                {s.difficulty ?? "Beginner"}
+              </span>
+            </div>
+            {s.desc && <p className="dash-sugg-desc">{s.desc}</p>}
+            {s.source && <span className="dash-sugg-source">{s.source.name} ↗</span>}
+          </a>
+        ))}
+      </div>
+    </div>
+  )
 }
 
 function Dashboard({ user, onNavigate }) {
   const [userData, setUserData] = useState(null)
   const [stats, setStats] = useState({ entries: 0, projects: 0 })
-  const [activeTab, setActiveTab] = useState("email")
-
-  // Change email state
-  const [newEmail, setNewEmail]   = useState("")
-  const [emailPw, setEmailPw]     = useState("")
-  const [emailMsg, setEmailMsg]   = useState(null)
-  const [emailLoading, setEmailLoading] = useState(false)
-
-  // Change password state
-  const [currentPw, setCurrentPw] = useState("")
-  const [newPw, setNewPw]         = useState("")
-  const [confirmPw, setConfirmPw] = useState("")
-  const [pwMsg, setPwMsg]         = useState(null)
-  const [pwLoading, setPwLoading] = useState(false)
+  const [activeTab, setActiveTab] = useState("about")
 
   useEffect(() => {
     const load = async () => {
@@ -66,48 +243,6 @@ function Dashboard({ user, onNavigate }) {
     load()
   }, [user.uid])
 
-  const handleEmailChange = async e => {
-    e.preventDefault()
-    if (!newEmail.trim() || !emailPw) return
-    setEmailLoading(true)
-    setEmailMsg(null)
-    try {
-      const credential = EmailAuthProvider.credential(user.email, emailPw)
-      await reauthenticateWithCredential(user, credential)
-      await verifyBeforeUpdateEmail(user, newEmail.trim())
-      setEmailMsg({
-        type: "success",
-        text: `Verification link sent to ${newEmail.trim()}. Click it to confirm.`,
-      })
-      setNewEmail("")
-      setEmailPw("")
-    } catch (err) {
-      setEmailMsg({ type: "error", text: friendlyError(err.code) })
-    } finally {
-      setEmailLoading(false)
-    }
-  }
-
-  const handlePasswordChange = async e => {
-    e.preventDefault()
-    if (!currentPw || !newPw || !confirmPw) return
-    if (newPw !== confirmPw) { setPwMsg({ type: "error", text: "New passwords do not match." }); return }
-    if (newPw.length < 6)    { setPwMsg({ type: "error", text: "Password must be at least 6 characters." }); return }
-    setPwLoading(true)
-    setPwMsg(null)
-    try {
-      const credential = EmailAuthProvider.credential(user.email, currentPw)
-      await reauthenticateWithCredential(user, credential)
-      await updatePassword(user, newPw)
-      setPwMsg({ type: "success", text: "Password updated successfully." })
-      setCurrentPw(""); setNewPw(""); setConfirmPw("")
-    } catch (err) {
-      setPwMsg({ type: "error", text: friendlyError(err.code) })
-    } finally {
-      setPwLoading(false)
-    }
-  }
-
   const pathway     = userData?.activePathway
   const roadmap     = pathway ? ROADMAPS[pathway] : null
   const progressObj = userData?.progress?.[pathway] ?? {}
@@ -121,6 +256,12 @@ function Dashboard({ user, onNavigate }) {
   const memberSince = userData?.createdAt
     ? new Intl.DateTimeFormat("en-US", { month: "long", year: "numeric" }).format(userData.createdAt.toDate())
     : null
+
+  const tabs = [
+    { id: "about",       label: "About"       },
+    { id: "pricing",     label: "Pricing"     },
+    { id: "suggestions", label: "Suggestions" },
+  ]
 
   return (
     <div className="dash-container">
@@ -192,87 +333,33 @@ function Dashboard({ user, onNavigate }) {
         ))}
       </div>
 
-      {/* ── Account settings tabs ── */}
-      <div className="dash-section-heading">Account Settings</div>
+      {/* ── Tabs ── */}
       <div className="dash-tabs">
-        <button
-          className={`dash-tab${activeTab === "email" ? " active" : ""}`}
-          onClick={() => setActiveTab("email")}
-        >
-          Change Email
-        </button>
-        <button
-          className={`dash-tab${activeTab === "password" ? " active" : ""}`}
-          onClick={() => setActiveTab("password")}
-        >
-          Change Password
-        </button>
+        {tabs.map(t => (
+          <button
+            key={t.id}
+            className={`dash-tab${activeTab === t.id ? " active" : ""}`}
+            onClick={() => setActiveTab(t.id)}
+          >
+            {t.label}
+          </button>
+        ))}
       </div>
 
-      {/* ── Change email ── */}
-      {activeTab === "email" && (
-        <div className="dash-section">
-          <h3 className="dash-section-title">Update Email Address</h3>
-          <p className="dash-section-sub">
-            A verification link will be sent to your new address. Your email
-            won&apos;t change until you click the link.
-          </p>
-          <form className="dash-form" onSubmit={handleEmailChange}>
-            <div className="form-group">
-              <label htmlFor="new-email">New email</label>
-              <input id="new-email" className="form-input" type="email" value={newEmail}
-                onChange={e => setNewEmail(e.target.value)} placeholder="new@example.com"
-                autoComplete="email" />
-            </div>
-            <div className="form-group">
-              <label htmlFor="email-pw">Current password</label>
-              <input id="email-pw" className="form-input" type="password" value={emailPw}
-                onChange={e => setEmailPw(e.target.value)} placeholder="Your current password"
-                autoComplete="current-password" />
-            </div>
-            <StatusMsg msg={emailMsg} />
-            <button type="submit" className="btn-primary"
-              style={{ width: "auto", padding: "0.6rem 1.5rem", marginTop: "0.5rem" }}
-              disabled={emailLoading || !newEmail.trim() || !emailPw}>
-              {emailLoading ? "Sending…" : "Send Verification"}
-            </button>
-          </form>
-        </div>
+      {activeTab === "about" && (
+        <AboutTab
+          user={user}
+          userData={userData}
+          stats={stats}
+          doneCount={doneCount}
+          totalTopics={totalTopics}
+          donePct={donePct}
+          roadmap={roadmap}
+          onNavigate={onNavigate}
+        />
       )}
-
-      {/* ── Change password ── */}
-      {activeTab === "password" && (
-        <div className="dash-section">
-          <h3 className="dash-section-title">Change Password</h3>
-          <p className="dash-section-sub">You must enter your current password to set a new one.</p>
-          <form className="dash-form" onSubmit={handlePasswordChange}>
-            <div className="form-group">
-              <label htmlFor="current-pw">Current password</label>
-              <input id="current-pw" className="form-input" type="password" value={currentPw}
-                onChange={e => setCurrentPw(e.target.value)} placeholder="Current password"
-                autoComplete="current-password" />
-            </div>
-            <div className="form-group">
-              <label htmlFor="new-pw">New password</label>
-              <input id="new-pw" className="form-input" type="password" value={newPw}
-                onChange={e => setNewPw(e.target.value)} placeholder="At least 6 characters"
-                autoComplete="new-password" />
-            </div>
-            <div className="form-group">
-              <label htmlFor="confirm-pw">Confirm new password</label>
-              <input id="confirm-pw" className="form-input" type="password" value={confirmPw}
-                onChange={e => setConfirmPw(e.target.value)} placeholder="Repeat new password"
-                autoComplete="new-password" />
-            </div>
-            <StatusMsg msg={pwMsg} />
-            <button type="submit" className="btn-primary"
-              style={{ width: "auto", padding: "0.6rem 1.5rem", marginTop: "0.5rem" }}
-              disabled={pwLoading || !currentPw || !newPw || !confirmPw}>
-              {pwLoading ? "Updating…" : "Update Password"}
-            </button>
-          </form>
-        </div>
-      )}
+      {activeTab === "pricing"     && <PricingTab />}
+      {activeTab === "suggestions" && <SuggestionsTab pathway={pathway} />}
     </div>
   )
 }

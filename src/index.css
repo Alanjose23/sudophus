@@ -1,12 +1,12 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,400;1,700&family=Inter:wght@300;400;500;600;700&display=swap');
+
 :root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  font-family: 'Inter', system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
-
   color-scheme: dark;
-  color: #d4e8d8;
-  background-color: #060b07;
-
+  color: rgba(255, 255, 255, 0.9);
+  background-color: #0a0a0a;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -19,21 +19,19 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
-  background: #060b07;
-  /* subtle scale-dot texture across the entire app */
-  background-image: radial-gradient(circle, rgba(16, 185, 129, 0.045) 1px, transparent 1px);
-  background-size: 28px 28px;
+  background: #0a0a0a;
+  background-image: radial-gradient(circle, rgba(255, 255, 255, 0.08) 1px, transparent 1px);
+  background-size: 32px 32px;
 }
 
 h1, h2, h3, h4 { line-height: 1.2; }
-h1 { font-size: 3rem; }
 
 a {
   font-weight: 500;
-  color: #10b981;
+  color: #a78b71;
   text-decoration: inherit;
 }
-a:hover { color: #34d399; }
+a:hover { color: #e8d5b7; }
 
 button {
   border-radius: 8px;
@@ -42,16 +40,16 @@ button {
   font-size: 1em;
   font-weight: 500;
   font-family: inherit;
-  background-color: #0d1a0f;
-  color: #d4e8d8;
+  background-color: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.85);
   cursor: pointer;
-  transition: border-color 0.2s;
+  transition: border-color 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-button:hover { border-color: #10b981; }
+button:hover { border-color: rgba(167, 139, 113, 0.5); }
 
 button:focus,
 button:focus-visible {
-  outline: 3px solid rgba(16, 185, 129, 0.35);
+  outline: 2px solid rgba(167, 139, 113, 0.4);
   outline-offset: 2px;
 }

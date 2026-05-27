@@ -1,8 +1,7 @@
 import { useState, useEffect, useRef } from "react"
 import { db } from "./firebase"
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore"
-import { ROADMAPS } from "./roadmapData"
-import { TOPIC_ICONS } from "./topicIcons"
+import { ROADMAPS, TOPIC_ICONS } from "./roadmapData"
 import "./roadmap.css"
 
 const STATUSES = ["need_practice", "practiced", "mastered"]

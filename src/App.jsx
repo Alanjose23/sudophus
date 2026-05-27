@@ -13,64 +13,76 @@ import { doc, getDoc } from 'firebase/firestore'
 
 import './App.css'
 
-/* ── Serpentine SVG decoration for the hero ── */
-function HeroSerpent() {
+/* ── Neural SVG decoration (gold snake aesthetic) ── */
+function HeroNeural() {
   return (
     <svg
-      className="hero-serpent"
-      viewBox="0 0 600 520"
+      className="hero-neural"
+      viewBox="0 0 900 500"
       fill="none"
       aria-hidden="true"
       xmlns="http://www.w3.org/2000/svg"
     >
       <defs>
-        <linearGradient id="sg" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%"   stopColor="#10b981" stopOpacity="0.55" />
-          <stop offset="45%"  stopColor="#34d399" stopOpacity="0.25" />
-          <stop offset="100%" stopColor="#f59e0b" stopOpacity="0.4"  />
+        <linearGradient id="nl1" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#c9b8a0" stopOpacity="0.85" />
+          <stop offset="100%" stopColor="#a78b71" stopOpacity="0" />
         </linearGradient>
-        <linearGradient id="sg2" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%"   stopColor="#f59e0b" stopOpacity="0.2" />
-          <stop offset="100%" stopColor="#10b981" stopOpacity="0.1" />
+        <linearGradient id="nl2" x1="100%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stopColor="#c9b8a0" stopOpacity="0.85" />
+          <stop offset="100%" stopColor="#a78b71" stopOpacity="0" />
+        </linearGradient>
+        <linearGradient id="nl3" x1="0%" y1="100%" x2="100%" y2="0%">
+          <stop offset="0%" stopColor="#c9b8a0" stopOpacity="0.85" />
+          <stop offset="100%" stopColor="#a78b71" stopOpacity="0" />
+        </linearGradient>
+        <linearGradient id="nl4" x1="100%" y1="100%" x2="0%" y2="0%">
+          <stop offset="0%" stopColor="#c9b8a0" stopOpacity="0.85" />
+          <stop offset="100%" stopColor="#a78b71" stopOpacity="0" />
         </linearGradient>
       </defs>
 
-      {/* Primary coiling serpent body */}
-      <path
-        d="M 80,20 C 220,-10 420,90 320,160
-           C 220,230 60,195 110,295
-           C 160,395 410,355 360,435
-           C 330,480 200,490 150,520"
-        stroke="url(#sg)"
-        strokeWidth="2.5"
-        strokeLinecap="round"
-      />
-      {/* Echo / shadow path */}
-      <path
-        d="M 105,30 C 245,0 445,100 345,170
-           C 245,240 85,205 135,305
-           C 185,405 435,365 385,445"
-        stroke="url(#sg2)"
-        strokeWidth="1.2"
-        strokeLinecap="round"
-      />
-      {/* Accent dots — like scale glints */}
-      <circle cx="200" cy="62"  r="2.5" fill="#10b981" opacity="0.5" />
-      <circle cx="330" cy="120" r="2"   fill="#f59e0b" opacity="0.45" />
-      <circle cx="125" cy="245" r="2.5" fill="#10b981" opacity="0.4" />
-      <circle cx="320" cy="340" r="2"   fill="#f59e0b" opacity="0.4" />
-      <circle cx="195" cy="440" r="2"   fill="#34d399" opacity="0.35" />
+      {/* Neural bezier branches from center outward — snake coil paths */}
+      <path className="node-line" d="M450,270 C380,260 280,200 130,90"   stroke="url(#nl1)" />
+      <path className="node-line" d="M450,270 C520,260 620,200 770,90"   stroke="url(#nl2)" />
+      <path className="node-line" d="M450,270 C380,280 260,340 110,430"  stroke="url(#nl3)" />
+      <path className="node-line" d="M450,270 C520,280 640,340 790,430"  stroke="url(#nl4)" />
+      {/* Secondary branches */}
+      <path className="node-line" d="M450,270 C400,240 320,160 200,60"  stroke="url(#nl1)" strokeWidth="0.7" opacity="0.4" />
+      <path className="node-line" d="M450,270 C500,240 580,160 700,60"  stroke="url(#nl2)" strokeWidth="0.7" opacity="0.4" />
 
-      {/* Far-right mirrored coil */}
-      <path
-        d="M 520,60 C 420,120 500,200 430,250
-           C 360,300 470,360 410,420"
-        stroke="url(#sg2)"
-        strokeWidth="1"
-        strokeLinecap="round"
-        opacity="0.5"
-      />
+      {/* Dashed flow overlay */}
+      <path className="node-dash" d="M450,270 C380,260 280,200 130,90"  stroke="#c9b8a0" />
+      <path className="node-dash" d="M450,270 C520,260 620,200 770,90"  stroke="#a78b71" />
+      <path className="node-dash" d="M450,270 C380,280 260,340 110,430" stroke="#c9b8a0" />
+      <path className="node-dash" d="M450,270 C520,280 640,340 790,430" stroke="#a78b71" />
+
+      {/* Central glow rings */}
+      <circle cx="450" cy="270" r="45"  fill="none" stroke="#a78b71" strokeWidth="0.6" opacity="0.2" />
+      <circle cx="450" cy="270" r="90"  fill="none" stroke="#a78b71" strokeWidth="0.4" opacity="0.1" />
+      <circle cx="450" cy="270" r="145" fill="none" stroke="#a78b71" strokeWidth="0.3" opacity="0.06" />
+
+      {/* Central node dot */}
+      <circle cx="450" cy="270" r="4.5" fill="#c9b8a0" opacity="0.7" />
+
+      {/* Endpoint accent dots */}
+      <circle cx="130"  cy="90"  r="3.5" fill="#a78b71" opacity="0.55" />
+      <circle cx="770"  cy="90"  r="3.5" fill="#a78b71" opacity="0.55" />
+      <circle cx="110"  cy="430" r="3.5" fill="#a78b71" opacity="0.55" />
+      <circle cx="790"  cy="430" r="3.5" fill="#a78b71" opacity="0.55" />
+      <circle cx="200"  cy="60"  r="2"   fill="#c9b8a0" opacity="0.35" />
+      <circle cx="700"  cy="60"  r="2"   fill="#c9b8a0" opacity="0.35" />
     </svg>
+  )
+}
+
+function LivePill() {
+  return (
+    <div className="live-pill" aria-hidden="true">
+      <span className="live-dot" />
+      <span className="live-label">Live</span>
+      <span className="live-text">Your journey, tracked</span>
+    </div>
   )
 }
 
@@ -78,21 +90,13 @@ function HeroSerpent() {
 function AppHeader({ user, onBack, onHome, onDashboard }) {
   return (
     <header className="app-header">
-      <div className="header-brand" onClick={onHome} role="button" tabIndex={0}>
-        <img
-          src="../public/sudo.jpg"
-          alt="Sudophus home"
-          className="header-logo"
-        />
+      <div className="header-brand" onClick={onHome} role="button" tabIndex={0} title="Home">
+        <img src="../public/sudo.jpg" alt="Sudophus home" className="header-logo" />
         <span className="header-title">Sudophus</span>
       </div>
       <div className="header-actions">
         {user && (
-          <span
-            className="header-user header-user--clickable"
-            onClick={onDashboard}
-            title="Your dashboard"
-          >
+          <span className="header-user header-user--clickable" onClick={onDashboard} title="Your dashboard">
             {user.email}
           </span>
         )}
@@ -251,27 +255,43 @@ function App() {
     default:
       return (
         <div className="container">
+          {/* ── Navigation ── */}
           <nav className="home-nav">
-            {user ? (
-              <div className="user-bar">
-                <span
-                  className="user-greeting user-greeting--clickable"
-                  onClick={goDashboard}
-                  title="Your dashboard"
-                >
-                  {user.email}
-                </span>
-                <button onClick={goDashboard} className="btn-outline">Dashboard</button>
-                <button onClick={handleLogout} className="btn-outline btn-outline--muted">Log Out</button>
-              </div>
-            ) : (
-              <button onClick={() => navigateTo("login")} className="btn-outline">Login</button>
-            )}
+            <div className="nav-brand" role="button" tabIndex={0}>
+              <img src="../public/sudo.jpg" alt="Sudophus" className="header-logo" />
+              <span className="nav-title">Sudophus</span>
+            </div>
+            <div className="nav-links">
+              <button className="nav-link" onClick={() => navigateTo("about")}>About</button>
+              <button className="nav-link" onClick={journalClick}>Journal</button>
+              <button className="nav-link" onClick={() => navigateTo("project")}>Projects</button>
+              {user && <button className="nav-link" onClick={() => navigateTo("roadmap")}>Learning</button>}
+            </div>
+            <div className="nav-actions">
+              {user ? (
+                <div className="user-bar">
+                  <span className="user-greeting user-greeting--clickable" onClick={goDashboard} title="Your dashboard">
+                    {user.email}
+                  </span>
+                  <button onClick={goDashboard} className="btn-outline">Dashboard</button>
+                  <button onClick={handleLogout} className="btn-outline btn-outline--muted">Log Out</button>
+                </div>
+              ) : (
+                <button onClick={() => navigateTo("login")} className="nav-cta">Get Started</button>
+              )}
+            </div>
           </nav>
 
+          {/* ── Hero ── */}
           <div className="hero">
-            <HeroSerpent />
+            <HeroNeural />
             <div className="hero-content">
+              <LivePill />
+              <h1 className="hero-headline">
+                Document your<br />
+                <em>coding journey.</em>
+              </h1>
+              <p className="subtitle">Maintain your momentum. Track your growth.</p>
               <img
                 src="../public/sudo.jpg"
                 alt="climb the mountain"
@@ -279,15 +299,32 @@ function App() {
                 onClick={handleImageClick}
                 title="About Sudophus"
               />
-              <h1>Sudophus</h1>
-              <p className="subtitle">Document your coding journey. Maintain your momentum.</p>
-              <div className="quote-block">
-                <p className="quote-text"><i>{quote}</i></p>
-                <button onClick={quoteChange} className="btn-ghost-sm">Refresh quote</button>
+              <div className="hero-cta-group">
+                {user ? (
+                  <button className="btn-primary hero-cta-primary" onClick={goDashboard}>
+                    Open Dashboard
+                  </button>
+                ) : (
+                  <>
+                    <button className="btn-primary hero-cta-primary" onClick={() => navigateTo("login")}>
+                      Get Started
+                    </button>
+                    <button className="btn-ghost-gold" onClick={() => navigateTo("about")}>
+                      Learn more ↗
+                    </button>
+                  </>
+                )}
               </div>
             </div>
           </div>
 
+          {/* ── Quote ── */}
+          <div className="quote-block" style={{ margin: "0 auto 1rem" }}>
+            <p className="quote-text"><i>{quote}</i></p>
+            <button onClick={quoteChange} className="btn-ghost-sm">↻ Refresh</button>
+          </div>
+
+          {/* ── Feature cards ── */}
           <div className="cards">
             <div className="card" onClick={journalClick}>
               <div className="card-icon">📓</div>

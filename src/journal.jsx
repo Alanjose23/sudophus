@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import "./journal.css"
 import { db } from "./firebase"
 import { collection, addDoc, getDocs, query, where, serverTimestamp, deleteDoc, doc } from "firebase/firestore"
-import { timeAgo, formatFull } from "./timeAgo"
+import { timeAgo, formatFull } from "./utils"
 
 function Journal({ entryC, user }) {
   const [entries, setEntries] = useState([])

@@ -6,8 +6,7 @@ import {
 } from "firebase/firestore"
 import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from "firebase/storage"
 import "./project.css"
-import { calcStreak, progressPct, progressColor } from "./projectHelpers"
-import { timeAgo, formatFull } from "./timeAgo"
+import { calcStreak, progressPct, progressColor, timeAgo, formatFull } from "./utils"
 import { PROJECT_SUGGESTIONS, SUGGESTION_SOURCES } from "./projectSuggestions"
 import { ROADMAPS } from "./roadmapData"
 
