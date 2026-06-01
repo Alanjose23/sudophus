@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react"
-import { auth, db } from "./firebase"
+import { useState, useEffect, useMemo } from "react"
+import { db } from "./firebase"
 import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore"
 import { ROADMAPS } from "./roadmapData"
 import { PROJECT_SUGGESTIONS } from "./projectSuggestions"
@@ -72,7 +72,7 @@ function shuffleArr(arr) {
   return a
 }
 
-function AboutTab({ user, userData, stats, doneCount, totalTopics, donePct, roadmap, onNavigate }) {
+function AboutTab({ stats, totalTopics, donePct, roadmap, onNavigate }) {
   const features = [
     { icon: "📓", label: "Daily Journal",      desc: "Log reflections, bugs fixed, and wins" },
     { icon: "🚀", label: "Project Tracker",    desc: "Showcase builds, track progress targets" },
@@ -171,14 +171,12 @@ function PricingTab() {
 }
 
 function SuggestionsTab({ pathway }) {
-  const pool = pathway ? (PROJECT_SUGGESTIONS[pathway] ?? []) : []
-  const [shown, setShown] = useState(() => shuffleArr(pool).slice(0, SHOWN_SUGG))
+  const pool = useMemo(() => pathway ? (PROJECT_SUGGESTIONS[pathway] ?? []) : [], [pathway])
+  const [shuffleKey, setShuffleKey] = useState(0)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const shown = useMemo(() => shuffleArr(pool).slice(0, SHOWN_SUGG), [pool, shuffleKey])
 
-  useEffect(() => {
-    setShown(shuffleArr(pool).slice(0, SHOWN_SUGG))
-  }, [pathway])
-
-  const shuffle = () => setShown(shuffleArr(pool).slice(0, SHOWN_SUGG))
+  const shuffle = () => setShuffleKey(k => k + 1)
 
   if (!pathway) {
     return (

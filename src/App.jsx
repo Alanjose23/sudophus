@@ -10,6 +10,7 @@ import { ROADMAPS } from './roadmapData'
 import { auth, db } from './firebase'
 import { onAuthStateChanged, signOut } from 'firebase/auth'
 import { doc, getDoc } from 'firebase/firestore'
+import sudoLogo from './assets/sudo.jpg'
 
 import './App.css'
 
@@ -91,7 +92,7 @@ function AppHeader({ user, onBack, onHome, onDashboard }) {
   return (
     <header className="app-header">
       <div className="header-brand" onClick={onHome} role="button" tabIndex={0} title="Home">
-        <img src="../public/sudo.jpg" alt="Sudophus home" className="header-logo" />
+        <img src={sudoLogo} alt="Sudophus home" className="header-logo" />
         <span className="header-title">Sudophus</span>
       </div>
       <div className="header-actions">
@@ -200,7 +201,7 @@ function HubCards({ onNavigate, onJournal, userPathway, count }) {
 
 function App() {
   const [screen, setScreen] = useState("home")
-  const [history, setHistory] = useState([])
+  const [, setHistory] = useState([])
   const [count, setCount] = useState(0)
   const [user, setUser] = useState(null)
   const [authReady, setAuthReady] = useState(false)
@@ -352,7 +353,7 @@ function App() {
           {/* ── Navigation ── */}
           <nav className="home-nav">
             <div className="nav-brand" role="button" tabIndex={0}>
-              <img src="../public/sudo.jpg" alt="Sudophus" className="header-logo" />
+              <img src={sudoLogo} alt="Sudophus" className="header-logo" />
               <span className="nav-title">Sudophus</span>
             </div>
             <div className="nav-links">
@@ -387,7 +388,7 @@ function App() {
               </h1>
               <p className="subtitle">Maintain your momentum. Track your growth.</p>
               <img
-                src="../public/sudo.jpg"
+                src={sudoLogo}
                 alt="climb the mountain"
                 className={`hero-img${imgClicking ? " hero-img--clicking" : ""}`}
                 onClick={handleImageClick}

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { db, storage } from "./firebase"
 import {
   collection, addDoc, getDocs, doc, updateDoc, deleteDoc,
@@ -488,15 +488,16 @@ function shuffle(arr) {
 
 function SuggestionsPanel({ pathwayId }) {
   const [open, setOpen] = useState(true)
-  const [displayed, setDisplayed] = useState([])
+  const [shuffleKey, setShuffleKey] = useState(0)
   const [fading, setFading] = useState(false)
 
   const suggestions = PROJECT_SUGGESTIONS[pathwayId]
   const roadmap = ROADMAPS[pathwayId]
-
-  useEffect(() => {
-    if (suggestions) setDisplayed(shuffle(suggestions).slice(0, SHOWN_COUNT))
-  }, [pathwayId])
+  const displayed = useMemo(
+    () => suggestions ? shuffle(suggestions).slice(0, SHOWN_COUNT) : [],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [suggestions, shuffleKey]
+  )
 
   if (!suggestions || !roadmap) return null
 
@@ -504,7 +505,7 @@ function SuggestionsPanel({ pathwayId }) {
     e.stopPropagation()
     setFading(true)
     setTimeout(() => {
-      setDisplayed(shuffle(suggestions).slice(0, SHOWN_COUNT))
+      setShuffleKey(k => k + 1)
       setFading(false)
     }, 200)
   }

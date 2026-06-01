@@ -1,4 +1,5 @@
 import "./App.css"
+import sudoLogo from "./assets/sudo.jpg"
 
 function About() {
   return (
@@ -6,7 +7,7 @@ function About() {
       <div className="about-container">
 
         <div className="about-hero">
-          <img src="../public/sudo.jpg" alt="Sudophus" className="about-img" />
+          <img src={sudoLogo} alt="Sudophus" className="about-img" />
           <h1 className="about-title">Sudophus</h1>
           <p className="about-tagline">A journal for the perpetual climb.</p>
         </div>
