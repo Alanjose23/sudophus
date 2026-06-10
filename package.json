@@ -1,11 +1,11 @@
 {
-  "name": "my-react-app",
+  "name": "sudophus",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.1.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build && cp dist/index.html dist/404.html",
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest",
@@ -14,7 +14,8 @@
   "dependencies": {
     "firebase": "^12.10.0",
     "react": "^19.2.0",
-    "react-dom": "^19.2.0"
+    "react-dom": "^19.2.0",
+    "react-router-dom": "^7.17.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",

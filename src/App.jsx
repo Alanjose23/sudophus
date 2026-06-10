@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { Routes, Route, Link, Navigate, Outlet, useNavigate } from 'react-router-dom'
 import Journal from './journal'
 import Loginscreen from './login'
 import Project from './project'
@@ -13,6 +14,17 @@ import { doc, getDoc } from 'firebase/firestore'
 import sudoLogo from './assets/sudo.jpg'
 
 import './App.css'
+
+/* Screen ids (used by Dashboard quick links) → routes */
+const PATHS = {
+  home:      "/",
+  about:     "/about",
+  journal:   "/journal",
+  project:   "/projects",
+  roadmap:   "/learning",
+  dashboard: "/dashboard",
+  login:     "/login",
+}
 
 /* ── Neural SVG decoration (gold snake aesthetic) ── */
 function HeroNeural() {
@@ -88,50 +100,47 @@ function LivePill() {
 }
 
 /* ── Shared header used on all inner screens ── */
-function AppHeader({ user, onBack, onHome, onDashboard }) {
+function AppHeader({ user }) {
+  const navigate = useNavigate()
   return (
     <header className="app-header">
-      <div className="header-brand" onClick={onHome} role="button" tabIndex={0} title="Home">
+      <Link to="/" className="header-brand" title="Home">
         <img src={sudoLogo} alt="Sudophus home" className="header-logo" />
         <span className="header-title">Sudophus</span>
-      </div>
+      </Link>
       <div className="header-actions">
         {user && (
-          <span className="header-user header-user--clickable" onClick={onDashboard} title="Your dashboard">
+          <Link to="/dashboard" className="header-user header-user--clickable" title="Your dashboard">
             {user.email}
-          </span>
+          </Link>
         )}
-        <button onClick={onBack} className="btn-ghost">← Back</button>
+        <button onClick={() => navigate(-1)} className="btn-ghost">← Back</button>
       </div>
     </header>
   )
 }
 
-function HubCards({ onNavigate, onJournal, userPathway, count }) {
+function HubCards({ userPathway }) {
   const items = [
     {
-      id:    "journal",
+      to:    PATHS.journal,
       icon:  "📓",
       label: "Journal",
       desc:  "Log your daily progress",
-      badge: count > 0 ? count : null,
-      delay: "0s",
     },
     {
-      id:    "project",
+      to:    PATHS.project,
       icon:  "🚀",
       label: "Projects",
       desc:  "Build & showcase your work",
-      delay: "0.6s",
     },
     {
-      id:    "roadmap",
+      to:    PATHS.roadmap,
       icon:  "🗺️",
       label: "Dev Topics",
       desc:  userPathway
         ? `${ROADMAPS[userPathway]?.title ?? "Custom"} pathway`
         : "Set your learning path",
-      delay: "1.2s",
     },
   ]
 
@@ -183,39 +192,160 @@ function HubCards({ onNavigate, onJournal, userPathway, count }) {
 
       <div className="hub-cards">
         {items.map(item => (
-          <button
-            key={item.id}
-            className="hub-card"
-            onClick={() => item.id === "journal" ? onJournal() : onNavigate(item.id)}
-          >
+          <Link key={item.to} to={item.to} className="hub-card">
             <span className="hub-card-icon">{item.icon}</span>
             <span className="hub-card-label">{item.label}</span>
             <span className="hub-card-desc">{item.desc}</span>
-            {item.badge && <span className="hub-card-badge">{item.badge}</span>}
-          </button>
+          </Link>
         ))}
       </div>
     </div>
   )
 }
 
-function App() {
-  const [screen, setScreen] = useState("home")
-  const [, setHistory] = useState([])
-  const [count, setCount] = useState(0)
-  const [user, setUser] = useState(null)
-  const [authReady, setAuthReady] = useState(false)
+/* ── Home (landing) screen ── */
+function Home({ user, userPathway }) {
+  const navigate = useNavigate()
   const [imgClicking, setImgClicking] = useState(false)
   const [quote, setQuote] = useState(
     () => quotes[Math.floor(Math.random() * quotes.length)]
   )
-  const [userPathway, setUserPathway] = useState(null)
-  const pathwayPromptedRef = useRef(false)
 
   const quoteChange = () => {
     const idx = Math.floor(Math.random() * quotes.length)
     setQuote(quotes[idx])
   }
+
+  const handleLogout = () => signOut(auth)
+
+  const handleImageClick = () => {
+    setImgClicking(true)
+    setTimeout(() => {
+      setImgClicking(false)
+      navigate(PATHS.about)
+    }, 350)
+  }
+
+  return (
+    <div className="container">
+      {/* ── Navigation ── */}
+      <nav className="home-nav">
+        <div className="nav-brand">
+          <img src={sudoLogo} alt="Sudophus" className="header-logo" />
+          <span className="nav-title">Sudophus</span>
+        </div>
+        <div className="nav-links">
+          <Link className="nav-link" to={PATHS.about}>About</Link>
+          <Link className="nav-link" to={PATHS.journal}>Journal</Link>
+          <Link className="nav-link" to={PATHS.project}>Projects</Link>
+          {user && <Link className="nav-link" to={PATHS.roadmap}>Learning</Link>}
+        </div>
+        <div className="nav-actions">
+          {user ? (
+            <div className="user-bar">
+              <Link to={PATHS.dashboard} className="user-greeting user-greeting--clickable" title="Your dashboard">
+                {user.email}
+              </Link>
+              <button onClick={() => navigate(PATHS.dashboard)} className="btn-outline">Dashboard</button>
+              <button onClick={handleLogout} className="btn-outline btn-outline--muted">Log Out</button>
+            </div>
+          ) : (
+            <Link to={PATHS.login} className="nav-cta">Get Started</Link>
+          )}
+        </div>
+      </nav>
+
+      {/* ── Hero ── */}
+      <div className="hero">
+        <HeroNeural />
+        <div className="hero-content">
+          <LivePill />
+          <h1 className="hero-headline">
+            Document your<br />
+            <em>coding journey.</em>
+          </h1>
+          <p className="subtitle">Maintain your momentum. Track your growth.</p>
+          <img
+            src={sudoLogo}
+            alt="climb the mountain"
+            className={`hero-img${imgClicking ? " hero-img--clicking" : ""}`}
+            onClick={handleImageClick}
+            title="About Sudophus"
+          />
+          <div className="hero-cta-group">
+            {user ? (
+              <button className="btn-primary hero-cta-primary" onClick={() => navigate(PATHS.dashboard)}>
+                Open Dashboard
+              </button>
+            ) : (
+              <>
+                <button className="btn-primary hero-cta-primary" onClick={() => navigate(PATHS.login)}>
+                  Get Started
+                </button>
+                <button className="btn-ghost-gold" onClick={() => navigate(PATHS.about)}>
+                  Learn more ↗
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* ── Quote ── */}
+      <div className="quote-block" style={{ margin: "0 auto 1rem" }}>
+        <p className="quote-text"><i>{quote}</i></p>
+        <button onClick={quoteChange} className="btn-ghost-sm">↻ Refresh</button>
+      </div>
+
+      {/* ── Feature area ── */}
+      {user ? (
+        <HubCards userPathway={userPathway} />
+      ) : (
+        <div className="cards">
+          <Link to={PATHS.journal} className="card">
+            <div className="card-icon">📓</div>
+            <h3>Journal</h3>
+            <p>Record your daily progress and reflections</p>
+          </Link>
+          <Link to={PATHS.project} className="card">
+            <div className="card-icon">🚀</div>
+            <h3>Projects</h3>
+            <p>Showcase and track your builds</p>
+          </Link>
+          <Link to={PATHS.login} className="card">
+            <div className="card-icon">🔑</div>
+            <h3>Sign In</h3>
+            <p>Start tracking your journey</p>
+          </Link>
+        </div>
+      )}
+    </div>
+  )
+}
+
+/* ── Shared chrome for all inner screens ── */
+function ShellLayout({ user }) {
+  return (
+    <div className="app-wrapper">
+      <AppHeader user={user} />
+      <Outlet />
+    </div>
+  )
+}
+
+/* Renders the login card in place when the route needs an account.
+   The URL is preserved, so the requested page appears right after sign-in. */
+function RequireAuth({ user, children }) {
+  if (!user) return <div className="auth-prompt"><Loginscreen /></div>
+  return children
+}
+
+function App() {
+  const navigate = useNavigate()
+  const [user, setUser] = useState(null)
+  const [authReady, setAuthReady] = useState(false)
+  const [userPathway, setUserPathway] = useState(null)
+  const pathwayPromptedRef = useRef(false)
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (u) => {
@@ -232,51 +362,13 @@ function App() {
           setUserPathway(pathway)
           if (!pathway && !pathwayPromptedRef.current) {
             pathwayPromptedRef.current = true
-            setScreen("roadmap")
+            navigate(PATHS.roadmap)
           }
         })
         .catch(err => console.error("Failed to load user data:", err))
     })
     return unsubscribe
-  }, [])
-
-  const navigateTo = (next) => {
-    if (next === screen) return
-    setHistory(h => [...h, screen])
-    setScreen(next)
-  }
-
-  const handleLogout = async () => {
-    await signOut(auth)
-    setHistory([])
-    setScreen("home")
-    setCount(0)
-  }
-
-  const journalClick = () => {
-    setCount(c => c + 1)
-    navigateTo("journal")
-  }
-
-  const backClick = () => {
-    if (screen === "login") setCount(0)
-    setHistory(h => {
-      const prev = h.at(-1) ?? "home"
-      setScreen(prev)
-      return h.slice(0, -1)
-    })
-  }
-
-  const goHome      = () => { setHistory([]); setScreen("home") }
-  const goDashboard = () => navigateTo("dashboard")
-
-  const handleImageClick = () => {
-    setImgClicking(true)
-    setTimeout(() => {
-      setImgClicking(false)
-      navigateTo("about")
-    }, 350)
-  }
+  }, [navigate])
 
   if (!authReady) {
     return (
@@ -286,169 +378,51 @@ function App() {
     )
   }
 
-  switch (screen) {
-    case "about":
-      return (
-        <div className="app-wrapper">
-          <AppHeader user={user} onBack={backClick} onHome={goHome} onDashboard={goDashboard} />
-          <About />
-        </div>
-      )
-
-    case "journal":
-      return (
-        <div className="app-wrapper">
-          <AppHeader user={user} onBack={backClick} onHome={goHome} onDashboard={goDashboard} />
-          {user
-            ? <Journal entryC={count} user={user} />
-            : <div className="auth-prompt"><Loginscreen /></div>
+  return (
+    <Routes>
+      <Route path="/" element={<Home user={user} userPathway={userPathway} />} />
+      <Route element={<ShellLayout user={user} />}>
+        <Route path="/about" element={<About />} />
+        <Route
+          path="/login"
+          element={user ? <Navigate to="/" replace /> : <Loginscreen />}
+        />
+        <Route
+          path="/journal"
+          element={
+            <RequireAuth user={user}>
+              <Journal user={user} />
+            </RequireAuth>
           }
-        </div>
-      )
-
-    case "login":
-      return (
-        <div className="app-wrapper">
-          <AppHeader user={user} onBack={backClick} onHome={goHome} onDashboard={goDashboard} />
-          <Loginscreen />
-        </div>
-      )
-
-    case "project":
-      return (
-        <div className="app-wrapper">
-          <AppHeader user={user} onBack={backClick} onHome={goHome} onDashboard={goDashboard} />
-          {user
-            ? <Project user={user} userPathway={userPathway} />
-            : <div className="auth-prompt"><Loginscreen /></div>
+        />
+        <Route
+          path="/projects"
+          element={
+            <RequireAuth user={user}>
+              <Project user={user} userPathway={userPathway} />
+            </RequireAuth>
           }
-        </div>
-      )
-
-    case "roadmap":
-      return (
-        <div className="app-wrapper">
-          <AppHeader user={user} onBack={backClick} onHome={goHome} onDashboard={goDashboard} />
-          {user
-            ? <Roadmap user={user} onPathwaySet={id => setUserPathway(id)} />
-            : <div className="auth-prompt"><Loginscreen /></div>
+        />
+        <Route
+          path="/learning"
+          element={
+            <RequireAuth user={user}>
+              <Roadmap user={user} onPathwaySet={setUserPathway} />
+            </RequireAuth>
           }
-        </div>
-      )
-
-    case "dashboard":
-      return (
-        <div className="app-wrapper">
-          <AppHeader user={user} onBack={backClick} onHome={goHome} onDashboard={goDashboard} />
-          {user
-            ? <Dashboard user={user} onNavigate={navigateTo} />
-            : <div className="auth-prompt"><Loginscreen /></div>
+        />
+        <Route
+          path="/dashboard"
+          element={
+            <RequireAuth user={user}>
+              <Dashboard user={user} onNavigate={id => navigate(PATHS[id] ?? "/")} />
+            </RequireAuth>
           }
-        </div>
-      )
-
-    default:
-      return (
-        <div className="container">
-          {/* ── Navigation ── */}
-          <nav className="home-nav">
-            <div className="nav-brand" role="button" tabIndex={0}>
-              <img src={sudoLogo} alt="Sudophus" className="header-logo" />
-              <span className="nav-title">Sudophus</span>
-            </div>
-            <div className="nav-links">
-              <button className="nav-link" onClick={() => navigateTo("about")}>About</button>
-              <button className="nav-link" onClick={journalClick}>Journal</button>
-              <button className="nav-link" onClick={() => navigateTo("project")}>Projects</button>
-              {user && <button className="nav-link" onClick={() => navigateTo("roadmap")}>Learning</button>}
-            </div>
-            <div className="nav-actions">
-              {user ? (
-                <div className="user-bar">
-                  <span className="user-greeting user-greeting--clickable" onClick={goDashboard} title="Your dashboard">
-                    {user.email}
-                  </span>
-                  <button onClick={goDashboard} className="btn-outline">Dashboard</button>
-                  <button onClick={handleLogout} className="btn-outline btn-outline--muted">Log Out</button>
-                </div>
-              ) : (
-                <button onClick={() => navigateTo("login")} className="nav-cta">Get Started</button>
-              )}
-            </div>
-          </nav>
-
-          {/* ── Hero ── */}
-          <div className="hero">
-            <HeroNeural />
-            <div className="hero-content">
-              <LivePill />
-              <h1 className="hero-headline">
-                Document your<br />
-                <em>coding journey.</em>
-              </h1>
-              <p className="subtitle">Maintain your momentum. Track your growth.</p>
-              <img
-                src={sudoLogo}
-                alt="climb the mountain"
-                className={`hero-img${imgClicking ? " hero-img--clicking" : ""}`}
-                onClick={handleImageClick}
-                title="About Sudophus"
-              />
-              <div className="hero-cta-group">
-                {user ? (
-                  <button className="btn-primary hero-cta-primary" onClick={goDashboard}>
-                    Open Dashboard
-                  </button>
-                ) : (
-                  <>
-                    <button className="btn-primary hero-cta-primary" onClick={() => navigateTo("login")}>
-                      Get Started
-                    </button>
-                    <button className="btn-ghost-gold" onClick={() => navigateTo("about")}>
-                      Learn more ↗
-                    </button>
-                  </>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* ── Quote ── */}
-          <div className="quote-block" style={{ margin: "0 auto 1rem" }}>
-            <p className="quote-text"><i>{quote}</i></p>
-            <button onClick={quoteChange} className="btn-ghost-sm">↻ Refresh</button>
-          </div>
-
-          {/* ── Feature area ── */}
-          {user ? (
-            <HubCards
-              onNavigate={navigateTo}
-              onJournal={journalClick}
-              userPathway={userPathway}
-              count={count}
-            />
-          ) : (
-            <div className="cards">
-              <div className="card" onClick={journalClick}>
-                <div className="card-icon">📓</div>
-                <h3>Journal</h3>
-                <p>Record your daily progress and reflections</p>
-              </div>
-              <div className="card" onClick={() => navigateTo("project")}>
-                <div className="card-icon">🚀</div>
-                <h3>Projects</h3>
-                <p>Showcase and track your builds</p>
-              </div>
-              <div className="card" onClick={() => navigateTo("login")}>
-                <div className="card-icon">🔑</div>
-                <h3>Sign In</h3>
-                <p>Start tracking your journey</p>
-              </div>
-            </div>
-          )}
-        </div>
-      )
-  }
+        />
+      </Route>
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  )
 }
 
 export default App

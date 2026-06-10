@@ -76,6 +76,18 @@
   line-height: 1.5;
 }
 
+.auth-notice {
+  background: rgba(74, 222, 128, 0.08);
+  border: 1px solid rgba(74, 222, 128, 0.25);
+  color: #86efac;
+  padding: 0.6rem 1rem;
+  border-radius: 10px;
+  font-size: 0.825rem;
+  margin-bottom: 1.25rem;
+  text-align: left;
+  line-height: 1.5;
+}
+
 /* ── CTA buttons ────────────────────────── */
 .auth-buttons {
   display: flex;

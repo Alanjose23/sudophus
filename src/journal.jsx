@@ -17,7 +17,7 @@ function fmtTime(s) {
   return `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`
 }
 
-function Journal({ entryC, user }) {
+function Journal({ user }) {
   const [entries, setEntries]   = useState([])
   const [text, setText]         = useState("")
   const [saving, setSaving]     = useState(false)
@@ -220,7 +220,7 @@ function Journal({ entryC, user }) {
 
   return (
     <div className="journal-container">
-      <h2>Journal entry: #{entryC}</h2>
+      <h2>Journal</h2>
       <p className="journal-meta">{metaText}</p>
 
       <textarea

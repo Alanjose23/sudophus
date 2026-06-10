@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { auth } from "./firebase"
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth"
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail } from "firebase/auth"
 import { db } from "./firebase"
 import { doc, setDoc, serverTimestamp } from "firebase/firestore"
 import { friendlyError } from "./utils"
@@ -12,6 +12,7 @@ function Loginscreen() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState("")
+  const [notice, setNotice] = useState("")
   const [loading, setLoading] = useState(false)
 
   const resetFields = () => {
@@ -19,6 +20,7 @@ function Loginscreen() {
     setEmail("")
     setPassword("")
     setError("")
+    setNotice("")
   }
 
   const signup = async () => {
@@ -58,7 +60,48 @@ function Loginscreen() {
     }
   }
 
+  const resetPassword = async () => {
+    if (!email) {
+      setError("Enter your email address first.")
+      return
+    }
+    setLoading(true)
+    setError("")
+    setNotice("")
+    try {
+      await sendPasswordResetEmail(auth, email)
+      setNotice("Reset link sent — check your inbox (and spam folder).")
+    } catch (err) {
+      setError(friendlyError(err.code))
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const onKey = (fn) => (e) => { if (e.key === "Enter") fn() }
+
+  if (view === "forgot") {
+    return (
+      <div className="auth-card">
+        <h2>Reset Password</h2>
+        <p className="auth-subtitle">Enter your account email and we&apos;ll send you a reset link.</p>
+        {error && <p className="auth-error">{error}</p>}
+        {notice && <p className="auth-notice">{notice}</p>}
+        <div className="form-group">
+          <label>Email</label>
+          <input type="email" value={email} onChange={e => setEmail(e.target.value)}
+            placeholder="your@email.com" onKeyDown={onKey(resetPassword)} />
+        </div>
+        <button onClick={resetPassword} disabled={loading} className="btn-primary">
+          {loading ? "Sending…" : "Send Reset Link"}
+        </button>
+        <p className="auth-switch">
+          Remembered it?{" "}
+          <span onClick={() => { setView("login"); resetFields() }}>Sign in</span>
+        </p>
+      </div>
+    )
+  }
 
   if (view === "signup") {
     return (
@@ -109,6 +152,9 @@ function Loginscreen() {
         <button onClick={login} disabled={loading} className="btn-primary">
           {loading ? "Signing in…" : "Sign In"}
         </button>
+        <p className="auth-switch">
+          <span onClick={() => { setView("forgot"); setError(""); setNotice("") }}>Forgot password?</span>
+        </p>
         <p className="auth-switch">
           New to Sudophus?{" "}
           <span onClick={() => { setView("signup"); resetFields() }}>Create account</span>

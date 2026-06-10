@@ -232,6 +232,26 @@
   box-shadow: 0 0 24px rgba(167, 139, 113, 0.35);
 }
 
+/* Router <Link> elements reuse the former button/div nav classes */
+a.nav-link,
+a.nav-cta,
+a.card,
+a.hub-card,
+a.header-brand,
+a.header-user,
+a.user-greeting {
+  text-decoration: none;
+}
+
+a.nav-link,
+a.nav-cta,
+a.header-user,
+a.user-greeting { display: inline-block; }
+
+a.card { display: block; color: inherit; }
+a.hub-card,
+a.header-brand { color: inherit; }
+
 .user-bar { display: flex; align-items: center; gap: 0.85rem; }
 
 .user-greeting {
