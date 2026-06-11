@@ -1,16 +1,20 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, lazy, Suspense } from 'react'
 import { Routes, Route, Link, Navigate, Outlet, useNavigate } from 'react-router-dom'
-import Journal from './journal'
-import Loginscreen from './login'
-import Project from './project'
-import About from './about'
-import Roadmap from './roadmap'
-import Dashboard from './dashboard'
+import WeeklyDigest from './weeklyDigest'
 import quotes from './quotes'
+
+/* Route-level code splitting: each page loads on first visit */
+const Journal     = lazy(() => import('./journal'))
+const Loginscreen = lazy(() => import('./login'))
+const Project     = lazy(() => import('./project'))
+const About       = lazy(() => import('./about'))
+const Roadmap     = lazy(() => import('./roadmap'))
+const Dashboard   = lazy(() => import('./dashboard'))
 import { ROADMAPS } from './roadmapData'
 import { auth, db } from './firebase'
 import { onAuthStateChanged, signOut } from 'firebase/auth'
 import { doc, getDoc } from 'firebase/firestore'
+import { NotebookPen, Rocket, Map, KeyRound, RefreshCw } from './icons.jsx'
 import sudoLogo from './assets/sudo.jpg'
 
 import './App.css'
@@ -26,7 +30,7 @@ const PATHS = {
   login:     "/login",
 }
 
-/* ── Neural SVG decoration (gold snake aesthetic) ── */
+/* ── Neural SVG decoration (indigo signal aesthetic) ── */
 function HeroNeural() {
   return (
     <svg
@@ -38,20 +42,20 @@ function HeroNeural() {
     >
       <defs>
         <linearGradient id="nl1" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#c9b8a0" stopOpacity="0.85" />
-          <stop offset="100%" stopColor="#a78b71" stopOpacity="0" />
+          <stop offset="0%" stopColor="#7886FF" stopOpacity="0.85" />
+          <stop offset="100%" stopColor="#5B6BFF" stopOpacity="0" />
         </linearGradient>
         <linearGradient id="nl2" x1="100%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stopColor="#c9b8a0" stopOpacity="0.85" />
-          <stop offset="100%" stopColor="#a78b71" stopOpacity="0" />
+          <stop offset="0%" stopColor="#7886FF" stopOpacity="0.85" />
+          <stop offset="100%" stopColor="#5B6BFF" stopOpacity="0" />
         </linearGradient>
         <linearGradient id="nl3" x1="0%" y1="100%" x2="100%" y2="0%">
-          <stop offset="0%" stopColor="#c9b8a0" stopOpacity="0.85" />
-          <stop offset="100%" stopColor="#a78b71" stopOpacity="0" />
+          <stop offset="0%" stopColor="#7886FF" stopOpacity="0.85" />
+          <stop offset="100%" stopColor="#5B6BFF" stopOpacity="0" />
         </linearGradient>
         <linearGradient id="nl4" x1="100%" y1="100%" x2="0%" y2="0%">
-          <stop offset="0%" stopColor="#c9b8a0" stopOpacity="0.85" />
-          <stop offset="100%" stopColor="#a78b71" stopOpacity="0" />
+          <stop offset="0%" stopColor="#7886FF" stopOpacity="0.85" />
+          <stop offset="100%" stopColor="#5B6BFF" stopOpacity="0" />
         </linearGradient>
       </defs>
 
@@ -65,26 +69,26 @@ function HeroNeural() {
       <path className="node-line" d="M450,270 C500,240 580,160 700,60"  stroke="url(#nl2)" strokeWidth="0.7" opacity="0.4" />
 
       {/* Dashed flow overlay */}
-      <path className="node-dash" d="M450,270 C380,260 280,200 130,90"  stroke="#c9b8a0" />
-      <path className="node-dash" d="M450,270 C520,260 620,200 770,90"  stroke="#a78b71" />
-      <path className="node-dash" d="M450,270 C380,280 260,340 110,430" stroke="#c9b8a0" />
-      <path className="node-dash" d="M450,270 C520,280 640,340 790,430" stroke="#a78b71" />
+      <path className="node-dash" d="M450,270 C380,260 280,200 130,90"  stroke="#7886FF" />
+      <path className="node-dash" d="M450,270 C520,260 620,200 770,90"  stroke="#5B6BFF" />
+      <path className="node-dash" d="M450,270 C380,280 260,340 110,430" stroke="#7886FF" />
+      <path className="node-dash" d="M450,270 C520,280 640,340 790,430" stroke="#5B6BFF" />
 
       {/* Central glow rings */}
-      <circle cx="450" cy="270" r="45"  fill="none" stroke="#a78b71" strokeWidth="0.6" opacity="0.2" />
-      <circle cx="450" cy="270" r="90"  fill="none" stroke="#a78b71" strokeWidth="0.4" opacity="0.1" />
-      <circle cx="450" cy="270" r="145" fill="none" stroke="#a78b71" strokeWidth="0.3" opacity="0.06" />
+      <circle cx="450" cy="270" r="45"  fill="none" stroke="#5B6BFF" strokeWidth="0.6" opacity="0.2" />
+      <circle cx="450" cy="270" r="90"  fill="none" stroke="#5B6BFF" strokeWidth="0.4" opacity="0.1" />
+      <circle cx="450" cy="270" r="145" fill="none" stroke="#5B6BFF" strokeWidth="0.3" opacity="0.06" />
 
       {/* Central node dot */}
-      <circle cx="450" cy="270" r="4.5" fill="#c9b8a0" opacity="0.7" />
+      <circle cx="450" cy="270" r="4.5" fill="#7886FF" opacity="0.7" />
 
       {/* Endpoint accent dots */}
-      <circle cx="130"  cy="90"  r="3.5" fill="#a78b71" opacity="0.55" />
-      <circle cx="770"  cy="90"  r="3.5" fill="#a78b71" opacity="0.55" />
-      <circle cx="110"  cy="430" r="3.5" fill="#a78b71" opacity="0.55" />
-      <circle cx="790"  cy="430" r="3.5" fill="#a78b71" opacity="0.55" />
-      <circle cx="200"  cy="60"  r="2"   fill="#c9b8a0" opacity="0.35" />
-      <circle cx="700"  cy="60"  r="2"   fill="#c9b8a0" opacity="0.35" />
+      <circle cx="130"  cy="90"  r="3.5" fill="#5B6BFF" opacity="0.55" />
+      <circle cx="770"  cy="90"  r="3.5" fill="#5B6BFF" opacity="0.55" />
+      <circle cx="110"  cy="430" r="3.5" fill="#5B6BFF" opacity="0.55" />
+      <circle cx="790"  cy="430" r="3.5" fill="#5B6BFF" opacity="0.55" />
+      <circle cx="200"  cy="60"  r="2"   fill="#7886FF" opacity="0.35" />
+      <circle cx="700"  cy="60"  r="2"   fill="#7886FF" opacity="0.35" />
     </svg>
   )
 }
@@ -124,19 +128,19 @@ function HubCards({ userPathway }) {
   const items = [
     {
       to:    PATHS.journal,
-      icon:  "📓",
+      Icon:  NotebookPen,
       label: "Journal",
       desc:  "Log your daily progress",
     },
     {
       to:    PATHS.project,
-      icon:  "🚀",
+      Icon:  Rocket,
       label: "Projects",
       desc:  "Build & showcase your work",
     },
     {
       to:    PATHS.roadmap,
-      icon:  "🗺️",
+      Icon:  Map,
       label: "Dev Topics",
       desc:  userPathway
         ? `${ROADMAPS[userPathway]?.title ?? "Custom"} pathway`
@@ -156,16 +160,16 @@ function HubCards({ userPathway }) {
       >
         <defs>
           <linearGradient id="hgl" x1="100%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%"   stopColor="#c9b8a0" stopOpacity="0.9" />
-            <stop offset="100%" stopColor="#a78b71" stopOpacity="0.1" />
+            <stop offset="0%"   stopColor="#7886FF" stopOpacity="0.9" />
+            <stop offset="100%" stopColor="#5B6BFF" stopOpacity="0.1" />
           </linearGradient>
           <linearGradient id="hgm" x1="50%" y1="0%" x2="50%" y2="100%">
-            <stop offset="0%"   stopColor="#c9b8a0" stopOpacity="0.9" />
-            <stop offset="100%" stopColor="#a78b71" stopOpacity="0.1" />
+            <stop offset="0%"   stopColor="#7886FF" stopOpacity="0.9" />
+            <stop offset="100%" stopColor="#5B6BFF" stopOpacity="0.1" />
           </linearGradient>
           <linearGradient id="hgr" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%"   stopColor="#c9b8a0" stopOpacity="0.9" />
-            <stop offset="100%" stopColor="#a78b71" stopOpacity="0.1" />
+            <stop offset="0%"   stopColor="#7886FF" stopOpacity="0.9" />
+            <stop offset="100%" stopColor="#5B6BFF" stopOpacity="0.1" />
           </linearGradient>
         </defs>
 
@@ -180,20 +184,20 @@ function HubCards({ userPathway }) {
           d="M410,24 C440,80 580,140 681,188" stroke="url(#hgr)" />
 
         {/* Hub center */}
-        <circle cx="410" cy="24" r="5"  fill="#c9b8a0" opacity="0.85" />
-        <circle cx="410" cy="24" r="14" fill="none" stroke="#c9b8a0" strokeWidth="0.6" opacity="0.25" />
-        <circle cx="410" cy="24" r="26" fill="none" stroke="#c9b8a0" strokeWidth="0.3" opacity="0.12" />
+        <circle cx="410" cy="24" r="5"  fill="#7886FF" opacity="0.85" />
+        <circle cx="410" cy="24" r="14" fill="none" stroke="#7886FF" strokeWidth="0.6" opacity="0.25" />
+        <circle cx="410" cy="24" r="26" fill="none" stroke="#7886FF" strokeWidth="0.3" opacity="0.12" />
 
         {/* Endpoint accent dots */}
-        <circle cx="139" cy="188" r="3.5" fill="#a78b71" opacity="0.55" />
-        <circle cx="410" cy="192" r="3.5" fill="#a78b71" opacity="0.55" />
-        <circle cx="681" cy="188" r="3.5" fill="#a78b71" opacity="0.55" />
+        <circle cx="139" cy="188" r="3.5" fill="#5B6BFF" opacity="0.55" />
+        <circle cx="410" cy="192" r="3.5" fill="#5B6BFF" opacity="0.55" />
+        <circle cx="681" cy="188" r="3.5" fill="#5B6BFF" opacity="0.55" />
       </svg>
 
       <div className="hub-cards">
         {items.map(item => (
           <Link key={item.to} to={item.to} className="hub-card">
-            <span className="hub-card-icon">{item.icon}</span>
+            <span className="hub-card-icon"><item.Icon size={36} strokeWidth={1.5} aria-hidden="true" /></span>
             <span className="hub-card-label">{item.label}</span>
             <span className="hub-card-desc">{item.desc}</span>
           </Link>
@@ -265,13 +269,17 @@ function Home({ user, userPathway }) {
             <em>coding journey.</em>
           </h1>
           <p className="subtitle">Maintain your momentum. Track your growth.</p>
-          <img
-            src={sudoLogo}
-            alt="climb the mountain"
-            className={`hero-img${imgClicking ? " hero-img--clicking" : ""}`}
-            onClick={handleImageClick}
-            title="About Sudophus"
-          />
+          {user ? (
+            <WeeklyDigest user={user} />
+          ) : (
+            <img
+              src={sudoLogo}
+              alt="climb the mountain"
+              className={`hero-img${imgClicking ? " hero-img--clicking" : ""}`}
+              onClick={handleImageClick}
+              title="About Sudophus"
+            />
+          )}
           <div className="hero-cta-group">
             {user ? (
               <button className="btn-primary hero-cta-primary" onClick={() => navigate(PATHS.dashboard)}>
@@ -294,7 +302,9 @@ function Home({ user, userPathway }) {
       {/* ── Quote ── */}
       <div className="quote-block" style={{ margin: "0 auto 1rem" }}>
         <p className="quote-text"><i>{quote}</i></p>
-        <button onClick={quoteChange} className="btn-ghost-sm">↻ Refresh</button>
+        <button onClick={quoteChange} className="btn-ghost-sm btn-icon-row">
+          <RefreshCw size={13} strokeWidth={1.75} aria-hidden="true" /> Refresh
+        </button>
       </div>
 
       {/* ── Feature area ── */}
@@ -303,17 +313,17 @@ function Home({ user, userPathway }) {
       ) : (
         <div className="cards">
           <Link to={PATHS.journal} className="card">
-            <div className="card-icon">📓</div>
+            <div className="card-icon"><NotebookPen size={28} strokeWidth={1.5} aria-hidden="true" /></div>
             <h3>Journal</h3>
             <p>Record your daily progress and reflections</p>
           </Link>
           <Link to={PATHS.project} className="card">
-            <div className="card-icon">🚀</div>
+            <div className="card-icon"><Rocket size={28} strokeWidth={1.5} aria-hidden="true" /></div>
             <h3>Projects</h3>
             <p>Showcase and track your builds</p>
           </Link>
           <Link to={PATHS.login} className="card">
-            <div className="card-icon">🔑</div>
+            <div className="card-icon"><KeyRound size={28} strokeWidth={1.5} aria-hidden="true" /></div>
             <h3>Sign In</h3>
             <p>Start tracking your journey</p>
           </Link>
@@ -379,6 +389,13 @@ function App() {
   }
 
   return (
+    <Suspense
+      fallback={
+        <div className="loading-screen">
+          <span className="loading-dot" />
+        </div>
+      }
+    >
     <Routes>
       <Route path="/" element={<Home user={user} userPathway={userPathway} />} />
       <Route element={<ShellLayout user={user} />}>
@@ -422,6 +439,7 @@ function App() {
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    </Suspense>
   )
 }
 

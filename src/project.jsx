@@ -7,8 +7,11 @@ import {
 import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from "firebase/storage"
 import "./project.css"
 import { calcStreak, progressPct, progressColor, timeAgo, formatFull } from "./utils"
-import { PROJECT_SUGGESTIONS, SUGGESTION_SOURCES } from "./projectSuggestions"
+import { PROJECT_SUGGESTIONS, DIFFICULTY_TIERS, TIER_LABELS } from "./projectSuggestions"
 import { ROADMAPS } from "./roadmapData"
+import { buildProjectPost, openLinkedInComposer } from "./linkedin"
+import { Star, X, ChevronUp, ChevronDown, PartyPopper, Pencil, Plus } from "lucide-react"
+import { PathwayIcon, LinkedInIcon, Map, Flame, RefreshCw } from "./icons.jsx"
 
 function ProjectCard({ project, entryCount, streak, onClick, onStar }) {
   const pct = progressPct(entryCount, project.target)
@@ -23,7 +26,7 @@ function ProjectCard({ project, entryCount, streak, onClick, onStar }) {
             onClick={e => { e.stopPropagation(); onStar() }}
             title={project.starred ? "Unstar" : "Star"}
           >
-            {project.starred ? "★" : "☆"}
+            <Star size={17} strokeWidth={1.75} fill={project.starred ? "currentColor" : "none"} />
           </span>
         </div>
         {project.description && (
@@ -41,7 +44,7 @@ function ProjectCard({ project, entryCount, streak, onClick, onStar }) {
           <span className="proj-pct">{pct}%</span>
           {streak > 0 && (
             <span className="proj-streak" data-testid="streak-badge">
-              🔥 {streak} day{streak !== 1 ? "s" : ""}
+              <Flame size={12} strokeWidth={1.75} aria-hidden="true" /> {streak} day{streak !== 1 ? "s" : ""}
             </span>
           )}
           <span className="proj-entries">{entryCount} / {project.target ?? "?"} sessions</span>
@@ -64,11 +67,12 @@ function ProjectCard({ project, entryCount, streak, onClick, onStar }) {
   )
 }
 
-function CreateProjectForm({ user, onCreated, onCancel }) {
-  const [title, setTitle] = useState("")
-  const [desc, setDesc] = useState("")
-  const [target, setTarget] = useState(20)
-  const [tagsRaw, setTagsRaw] = useState("")
+function CreateProjectForm({ user, onCreated, onCancel, initial, editProject, onUpdated }) {
+  const seed = editProject ?? initial
+  const [title, setTitle] = useState(seed?.title ?? "")
+  const [desc, setDesc] = useState(seed?.description ?? "")
+  const [target, setTarget] = useState(editProject?.target ?? 20)
+  const [tagsRaw, setTagsRaw] = useState((seed?.tags ?? []).join(", "))
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState("")
 
@@ -77,36 +81,40 @@ function CreateProjectForm({ user, onCreated, onCancel }) {
     if (!title.trim()) { setError("Title is required"); return }
     setSaving(true)
     setError("")
+    const fields = {
+      title: title.trim(),
+      description: desc.trim(),
+      target: Number(target) || 20,
+      tags: tagsRaw.split(",").map(t => t.trim()).filter(Boolean),
+    }
     try {
-      const tags = tagsRaw.split(",").map(t => t.trim()).filter(Boolean)
+      if (editProject) {
+        await updateDoc(doc(db, "projects", editProject.id), fields)
+        onUpdated({ ...editProject, ...fields })
+        return
+      }
       const docRef = await addDoc(collection(db, "projects"), {
-        title: title.trim(),
-        description: desc.trim(),
-        target: Number(target) || 20,
-        tags,
+        ...fields,
         starred: false,
         uid: user.uid,
         createdAt: serverTimestamp(),
       })
       onCreated({
         id: docRef.id,
-        title: title.trim(),
-        description: desc.trim(),
-        target: Number(target) || 20,
-        tags,
+        ...fields,
         starred: false,
         uid: user.uid,
         createdAt: new Date(),
       })
     } catch {
-      setError("Failed to create project. Try again.")
+      setError(editProject ? "Failed to save changes. Try again." : "Failed to create project. Try again.")
       setSaving(false)
     }
   }
 
   return (
     <form className="create-form" onSubmit={handleSubmit}>
-      <h2 className="create-form-title">New Project</h2>
+      <h2 className="create-form-title">{editProject ? "Edit Project" : "New Project"}</h2>
       {error && <div className="form-error" data-testid="form-error">{error}</div>}
       <div className="form-group">
         <label htmlFor="proj-title">Title</label>
@@ -162,14 +170,16 @@ function CreateProjectForm({ user, onCreated, onCancel }) {
           style={{ width: "auto", padding: "0.65rem 1.5rem" }}
           data-testid="create-submit"
         >
-          {saving ? "Creating…" : "Create project"}
+          {editProject
+            ? (saving ? "Saving…" : "Save changes")
+            : (saving ? "Creating…" : "Create project")}
         </button>
       </div>
     </form>
   )
 }
 
-function ProjectDetail({ project, entries, user, onBack, onEntryAdded, onStar, onDelete }) {
+function ProjectDetail({ project, entries, user, onBack, onEntryAdded, onStar, onDelete, onEdit, justCreated }) {
   const [text, setText] = useState("")
   const [saving, setSaving] = useState(false)
   const [screenshots, setScreenshots] = useState(project.screenshots ?? [])
@@ -262,18 +272,53 @@ function ProjectDetail({ project, entries, user, onBack, onEntryAdded, onStar, o
 
   const toDate = d => d?.toDate ? d.toDate() : new Date(d)
 
+  const shareProgress = () =>
+    openLinkedInComposer(
+      buildProjectPost(project, { sessionsDone: entries.length, streak })
+    )
+
+  const shareNew = () =>
+    openLinkedInComposer(buildProjectPost(project, { isNew: true }))
+
   return (
     <div className="detail-container">
+      {justCreated && (
+        <div className="share-banner" data-testid="share-banner">
+          <span className="share-banner-text">
+            <PartyPopper size={15} strokeWidth={1.75} aria-hidden="true" /> Project created! Tell your network what you're building.
+          </span>
+          <button className="btn-linkedin" onClick={shareNew}>
+            <LinkedInIcon /> Post to LinkedIn
+          </button>
+        </div>
+      )}
+
       <div className="detail-header">
         <button className="btn-ghost" onClick={onBack}>← Projects</button>
         <h2 className="detail-title">{project.title}</h2>
+        <button
+          className="btn-ghost-sm btn-icon-row"
+          onClick={onEdit}
+          title="Edit title, description, target, or tags"
+          data-testid="edit-project"
+        >
+          <Pencil size={12} strokeWidth={1.75} aria-hidden="true" /> Edit
+        </button>
+        <button
+          className="btn-linkedin btn-linkedin--sm"
+          onClick={shareProgress}
+          title="Post a progress update to LinkedIn"
+          data-testid="share-progress"
+        >
+          <LinkedInIcon /> Share
+        </button>
         <span
           className={`proj-star${project.starred ? " starred" : ""}`}
           onClick={onStar}
           title={project.starred ? "Unstar" : "Star"}
           data-testid="detail-star"
         >
-          {project.starred ? "★" : "☆"}
+          <Star size={19} strokeWidth={1.75} fill={project.starred ? "currentColor" : "none"} />
         </span>
       </div>
 
@@ -404,7 +449,7 @@ function ProjectDetail({ project, entries, user, onBack, onEntryAdded, onStar, o
                   title="Remove screenshot"
                   data-testid="screenshot-delete"
                 >
-                  ×
+                  <X size={12} strokeWidth={2} />
                 </button>
               </div>
             ))}
@@ -445,14 +490,12 @@ function ProjectDetail({ project, entries, user, onBack, onEntryAdded, onStar, o
   )
 }
 
-const DIFFICULTY_LABELS = { beginner: "Beginner", intermediate: "Intermediate", advanced: "Advanced" }
-
-function SuggestionCard({ item }) {
+function SuggestionCard({ item, onStart }) {
   return (
     <div className="sugg-card">
       <div className="sugg-card-top">
         <span className={`sugg-difficulty sugg-difficulty--${item.difficulty}`}>
-          {DIFFICULTY_LABELS[item.difficulty]}
+          {TIER_LABELS[item.difficulty]}
         </span>
         <span className="sugg-source">{item.source.name}</span>
       </div>
@@ -462,68 +505,71 @@ function SuggestionCard({ item }) {
         <div className="sugg-tags">
           {item.tags.map(t => <span key={t} className="sugg-tag">{t}</span>)}
         </div>
-        <a
-          className="sugg-link"
-          href={item.source.url}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          View resource ↗
-        </a>
+        <div className="sugg-card-actions">
+          <a
+            className="sugg-link"
+            href={item.source.url}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            View resource ↗
+          </a>
+          <button
+            className="sugg-start-btn"
+            onClick={() => onStart(item)}
+            title="Create a project pre-filled from this idea"
+            data-testid="start-suggestion"
+          >
+            <Plus size={12} strokeWidth={2} aria-hidden="true" /> Start project
+          </button>
+        </div>
       </div>
     </div>
   )
 }
 
-const SHOWN_COUNT = 4
-
-function shuffle(arr) {
-  const a = [...arr]
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]]
-  }
-  return a
-}
-
-function SuggestionsPanel({ pathwayId }) {
+function SuggestionsPanel({ pathwayId, onStart }) {
   const [open, setOpen] = useState(true)
-  const [shuffleKey, setShuffleKey] = useState(0)
+  const [tier, setTier] = useState(DIFFICULTY_TIERS[0])
   const [fading, setFading] = useState(false)
 
   const suggestions = PROJECT_SUGGESTIONS[pathwayId]
   const roadmap = ROADMAPS[pathwayId]
   const displayed = useMemo(
-    () => suggestions ? shuffle(suggestions).slice(0, SHOWN_COUNT) : [],
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [suggestions, shuffleKey]
+    () => suggestions ? suggestions.filter(s => s.difficulty === tier) : [],
+    [suggestions, tier]
   )
 
   if (!suggestions || !roadmap) return null
 
-  const handleShuffle = e => {
-    e.stopPropagation()
+  const switchTier = nextTier => {
+    if (nextTier === tier) return
     setFading(true)
     setTimeout(() => {
-      setShuffleKey(k => k + 1)
+      setTier(nextTier)
       setFading(false)
     }, 200)
+  }
+
+  const handleCycle = e => {
+    e.stopPropagation()
+    switchTier(DIFFICULTY_TIERS[(DIFFICULTY_TIERS.indexOf(tier) + 1) % DIFFICULTY_TIERS.length])
   }
 
   return (
     <div className="sugg-panel">
       <div className="sugg-panel-header" onClick={() => setOpen(o => !o)} role="button" tabIndex={0}>
         <div className="sugg-panel-title-row">
-          <span className="sugg-panel-icon">{roadmap.icon}</span>
+          <span className="sugg-panel-icon"><PathwayIcon id={pathwayId} size={18} /></span>
           <h3 className="sugg-panel-title">
             Project ideas for your {roadmap.title} journey
           </h3>
         </div>
         <div className="sugg-panel-right">
           <span className="sugg-panel-count">
-            {open ? `Showing ${displayed.length} of ${suggestions.length}` : `${suggestions.length} ideas`}
+            {open ? `${displayed.length} ${TIER_LABELS[tier].toLowerCase()} ideas of ${suggestions.length}` : `${suggestions.length} ideas`}
           </span>
-          <span className="sugg-panel-chevron">{open ? "▲" : "▼"}</span>
+          <span className="sugg-panel-chevron">{open ? <ChevronUp size={14} strokeWidth={1.75} /> : <ChevronDown size={14} strokeWidth={1.75} />}</span>
         </div>
       </div>
 
@@ -542,13 +588,28 @@ function SuggestionsPanel({ pathwayId }) {
               ))}
               {" "}and more.
             </p>
-            <button className="sugg-shuffle-btn" onClick={handleShuffle} title="Get new ideas">
-              🔀 New ideas
-            </button>
+            <div className="sugg-tier-controls">
+              <div className="tier-tabs" role="tablist" aria-label="Suggestion difficulty">
+                {DIFFICULTY_TIERS.map(t => (
+                  <button
+                    key={t}
+                    role="tab"
+                    aria-selected={tier === t}
+                    className={`tier-tab${tier === t ? " active" : ""}`}
+                    onClick={e => { e.stopPropagation(); switchTier(t) }}
+                  >
+                    {TIER_LABELS[t]}
+                  </button>
+                ))}
+              </div>
+              <button className="sugg-shuffle-btn btn-icon-row" onClick={handleCycle} title="Cycle to the next difficulty tier">
+                <RefreshCw size={12} strokeWidth={1.75} aria-hidden="true" /> Next tier
+              </button>
+            </div>
           </div>
           <div className={`sugg-grid${fading ? " sugg-grid--fading" : ""}`}>
             {displayed.map(item => (
-              <SuggestionCard key={item.title} item={item} />
+              <SuggestionCard key={item.title} item={item} onStart={onStart} />
             ))}
           </div>
         </>
@@ -563,6 +624,9 @@ function Project({ user, userPathway }) {
   const [loading, setLoading] = useState(true)
   const [view, setView] = useState("list")
   const [activeProject, setActiveProject] = useState(null)
+  const [justCreated, setJustCreated] = useState(false)
+  const [prefill, setPrefill] = useState(null)
+  const [sortBy, setSortBy] = useState("newest")
 
   useEffect(() => {
     let cancelled = false
@@ -584,6 +648,20 @@ function Project({ user, userPathway }) {
   }, [user.uid])
 
   const projectEntries = pid => allEntries.filter(e => e.projectId === pid)
+
+  const sortedProjects = useMemo(() => {
+    const byNewest = (a, b) => (b.createdAt?.seconds ?? 0) - (a.createdAt?.seconds ?? 0)
+    const arr = [...projects]
+    if (sortBy === "starred") {
+      arr.sort((a, b) => (b.starred ? 1 : 0) - (a.starred ? 1 : 0) || byNewest(a, b))
+    } else if (sortBy === "progress") {
+      const pct = p => progressPct(allEntries.filter(e => e.projectId === p.id).length, p.target)
+      arr.sort((a, b) => pct(b) - pct(a) || byNewest(a, b))
+    } else {
+      arr.sort(byNewest)
+    }
+    return arr
+  }, [projects, allEntries, sortBy])
 
   const handleStar = async proj => {
     const next = !proj.starred
@@ -612,11 +690,32 @@ function Project({ user, userPathway }) {
       <div className="proj-page">
         <CreateProjectForm
           user={user}
+          initial={prefill}
           onCreated={p => {
             setProjects(ps => [p, ...ps])
-            setView("list")
+            setActiveProject(p)
+            setJustCreated(true)
+            setPrefill(null)
+            setView("detail")
           }}
-          onCancel={() => setView("list")}
+          onCancel={() => { setPrefill(null); setView("list") }}
+        />
+      </div>
+    )
+  }
+
+  if (view === "edit" && activeProject) {
+    return (
+      <div className="proj-page">
+        <CreateProjectForm
+          user={user}
+          editProject={activeProject}
+          onUpdated={updated => {
+            setProjects(ps => ps.map(pr => pr.id === updated.id ? updated : pr))
+            setActiveProject(updated)
+            setView("detail")
+          }}
+          onCancel={() => setView("detail")}
         />
       </div>
     )
@@ -628,10 +727,12 @@ function Project({ user, userPathway }) {
         project={activeProject}
         entries={projectEntries(activeProject.id)}
         user={user}
-        onBack={() => { setView("list"); setActiveProject(null) }}
+        justCreated={justCreated}
+        onBack={() => { setView("list"); setActiveProject(null); setJustCreated(false) }}
         onEntryAdded={entry => setAllEntries(prev => [entry, ...prev])}
         onStar={() => handleStar(activeProject)}
         onDelete={handleDeleteProject}
+        onEdit={() => setView("edit")}
       />
     )
   }
@@ -640,7 +741,21 @@ function Project({ user, userPathway }) {
     <div className="proj-page">
       <div className="proj-list-header">
         <h2 className="proj-list-title">Projects</h2>
-        <button className="btn-outline" onClick={() => setView("create")}>+ New project</button>
+        <div className="proj-list-controls">
+          {projects.length > 1 && (
+            <select
+              className="proj-sort"
+              value={sortBy}
+              onChange={e => setSortBy(e.target.value)}
+              aria-label="Sort projects"
+            >
+              <option value="newest">Newest first</option>
+              <option value="starred">Starred first</option>
+              <option value="progress">Most progress</option>
+            </select>
+          )}
+          <button className="btn-outline" onClick={() => setView("create")}>+ New project</button>
+        </div>
       </div>
 
       {projects.length === 0 ? (
@@ -656,7 +771,7 @@ function Project({ user, userPathway }) {
         </div>
       ) : (
         <div className="proj-grid" data-testid="project-grid">
-          {projects.map(p => (
+          {sortedProjects.map(p => (
             <ProjectCard
               key={p.id}
               project={p}
@@ -669,10 +784,18 @@ function Project({ user, userPathway }) {
         </div>
       )}
 
-      {userPathway && <SuggestionsPanel pathwayId={userPathway} />}
+      {userPathway && (
+        <SuggestionsPanel
+          pathwayId={userPathway}
+          onStart={item => {
+            setPrefill({ title: item.title, description: item.description, tags: item.tags })
+            setView("create")
+          }}
+        />
+      )}
       {!userPathway && (
         <div className="sugg-no-pathway">
-          <span className="sugg-no-pathway-icon">🗺️</span>
+          <span className="sugg-no-pathway-icon"><Map size={20} strokeWidth={1.5} aria-hidden="true" /></span>
           <p>Set a <strong>Learning Kit</strong> pathway to get curated project ideas here.</p>
         </div>
       )}

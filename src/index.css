@@ -1,12 +1,13 @@
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,400;1,700&family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap');
 
 :root {
-  font-family: 'Inter', system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  line-height: 1.55;
   font-weight: 400;
+  letter-spacing: -0.005em;
   color-scheme: dark;
-  color: rgba(255, 255, 255, 0.9);
-  background-color: #0a0a0a;
+  color: #F2F4F8;
+  background-color: #0A0B0F;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -19,37 +20,35 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
-  background: #0a0a0a;
-  background-image: radial-gradient(circle, rgba(255, 255, 255, 0.08) 1px, transparent 1px);
-  background-size: 32px 32px;
+  background: #0A0B0F;
 }
 
-h1, h2, h3, h4 { line-height: 1.2; }
+h1, h2, h3, h4 { line-height: 1.2; letter-spacing: -0.015em; }
 
 a {
   font-weight: 500;
-  color: #a78b71;
+  color: #5B6BFF;
   text-decoration: inherit;
 }
-a:hover { color: #e8d5b7; }
+a:hover { color: #7886FF; }
 
 button {
-  border-radius: 8px;
+  border-radius: 10px;
   border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
+  padding: 0.55em 1.2em;
+  font-size: 0.9375em;
   font-weight: 500;
   font-family: inherit;
-  background-color: rgba(255, 255, 255, 0.04);
-  color: rgba(255, 255, 255, 0.85);
+  background-color: #14151C;
+  color: #F2F4F8;
   cursor: pointer;
-  transition: border-color 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: border-color 150ms cubic-bezier(0.2, 0.6, 0.2, 1), background 150ms cubic-bezier(0.2, 0.6, 0.2, 1);
 }
 
-button:hover { border-color: rgba(167, 139, 113, 0.5); }
+button:hover { border-color: #3A3D4A; }
 
 button:focus,
 button:focus-visible {
-  outline: 2px solid rgba(167, 139, 113, 0.4);
-  outline-offset: 2px;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(91, 107, 255, 0.35);
 }

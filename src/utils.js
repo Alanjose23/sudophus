@@ -51,12 +51,19 @@ export function progressPct(entriesCount, target) {
   return Math.min(100, Math.round((entriesCount / target) * 100))
 }
 
-// Consistent with the gold/green design system
+// Consistent with the Halo design system (indigo primary, lime success)
 export function progressColor(pct) {
-  if (pct >= 100) return "#4ade80"
-  if (pct >= 60)  return "#c9b8a0"
-  if (pct >= 20)  return "#a78b71"
-  return "rgba(255,255,255,0.2)"
+  if (pct >= 100) return "#2BE08C"
+  if (pct >= 60)  return "#7886FF"
+  if (pct >= 20)  return "#5B6BFF"
+  return "#3A3D4A"
+}
+
+// Hashtags typed inside entry text (e.g. "#react") become filterable tags
+export function extractTags(text) {
+  if (!text) return []
+  const matches = text.match(/#[\p{L}\p{N}_-]+/gu) ?? []
+  return [...new Set(matches.map(t => t.toLowerCase()))]
 }
 
 export function friendlyError(code) {

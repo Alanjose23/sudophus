@@ -1,4 +1,5 @@
 import "./App.css"
+import { NotebookPen, Rocket, Quote } from "lucide-react"
 import sudoLogo from "./assets/sudo.jpg"
 
 function About() {
@@ -65,21 +66,21 @@ function About() {
           <h2>A toolkit for the journey</h2>
           <div className="about-features">
             <div className="about-feature">
-              <span className="about-feature-icon">📓</span>
+              <span className="about-feature-icon"><NotebookPen size={20} strokeWidth={1.5} aria-hidden="true" /></span>
               <div>
                 <strong>Journal</strong>
                 <p>Write freeform entries tied to your account. Every entry is timestamped and persisted — your full history is always there when you return.</p>
               </div>
             </div>
             <div className="about-feature">
-              <span className="about-feature-icon">🚀</span>
+              <span className="about-feature-icon"><Rocket size={20} strokeWidth={1.5} aria-hidden="true" /></span>
               <div>
                 <strong>Projects</strong>
                 <p>Attach the things you build to the process of building them. Document not just what shipped, but what the journey to ship it looked like.</p>
               </div>
             </div>
             <div className="about-feature">
-              <span className="about-feature-icon">💬</span>
+              <span className="about-feature-icon"><Quote size={20} strokeWidth={1.5} aria-hidden="true" /></span>
               <div>
                 <strong>Quotes</strong>
                 <p>Curated words from writers, scientists, and thinkers who understood that the work is never finished — and that is exactly the point.</p>

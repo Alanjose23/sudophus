@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from "react"
 import { db } from "./firebase"
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore"
-import { ROADMAPS, TOPIC_ICONS } from "./roadmapData"
+import { ROADMAPS } from "./roadmapData"
+import { PathwayIcon, TopicIcon, LinkedInIcon } from "./icons.jsx"
+import { buildMilestonePost, openLinkedInComposer } from "./linkedin"
 import "./roadmap.css"
 
 const STATUSES = ["practiced", "mastered"]
@@ -36,7 +38,7 @@ function PathwayCard({ roadmap, onSelect }) {
   const topicCount = roadmap.groups.reduce((n, g) => n + g.topics.length, 0)
   return (
     <div className="pathway-card" onClick={() => onSelect(roadmap.id)} role="button" tabIndex={0}>
-      <div className="pathway-icon">{roadmap.icon}</div>
+      <div className="pathway-icon"><PathwayIcon id={roadmap.id} size={28} /></div>
       <h3 className="pathway-title">{roadmap.title}</h3>
       <p className="pathway-desc">{roadmap.description}</p>
       <div className="pathway-footer">
@@ -47,17 +49,28 @@ function PathwayCard({ roadmap, onSelect }) {
   )
 }
 
-function TopicGroup({ group, statusMap, onSetStatus }) {
+function TopicGroup({ group, statusMap, onSetStatus, onShareMilestone }) {
   const allTopics = group.topics
   const weighted = weightedDone(statusMap, allTopics)
   const pct = Math.round((weighted / allTopics.length) * 100)
   const { mastered, practiced } = groupStats(statusMap, allTopics)
+  const complete = mastered === allTopics.length
 
   return (
     <div className="topic-group">
       <div className="topic-group-header">
         <span className="topic-group-label">{group.label}</span>
         <div className="topic-group-counts">
+          {complete && (
+            <button
+              className="tgc-share"
+              onClick={() => onShareMilestone(group)}
+              title="Share this milestone on LinkedIn"
+              data-testid="share-milestone"
+            >
+              <LinkedInIcon size={11} /> Share milestone
+            </button>
+          )}
           {mastered > 0 && (
             <span className="tgc tgc--mastered">{mastered} mastered</span>
           )}
@@ -79,9 +92,7 @@ function TopicGroup({ group, statusMap, onSetStatus }) {
               className={`topic-row${current === "mastered" ? " topic-row--mastered" : ""}`}
             >
               <div className="topic-row-left">
-                {TOPIC_ICONS[t.id] && (
-                  <span className="topic-icon" aria-hidden="true">{TOPIC_ICONS[t.id]}</span>
-                )}
+                <span className="topic-icon" aria-hidden="true"><TopicIcon id={t.id} /></span>
                 <span className={`topic-label${current === "mastered" ? " done" : ""}`}>
                   {t.label}
                 </span>
@@ -115,7 +126,7 @@ function UserKitBanner({ user, roadmap, masteredCount, practicedCount, totalTopi
         <div className="kit-user-info">
           <span className="kit-user-email">{user.email}</span>
           <span className="kit-user-pathway">
-            {roadmap.icon} {roadmap.title}
+            <PathwayIcon id={roadmap.id} size={14} /> {roadmap.title}
           </span>
         </div>
       </div>
@@ -266,7 +277,7 @@ function Roadmap({ user, onPathwaySet }) {
         <div>
           <div className="roadmap-pathway-label">Active Pathway</div>
           <h2 className="roadmap-pathway-title">
-            {roadmap.icon} {roadmap.title}
+            <PathwayIcon id={roadmap.id} size={20} /> {roadmap.title}
           </h2>
         </div>
         <div className="roadmap-header-actions">
@@ -314,6 +325,14 @@ function Roadmap({ user, onPathwaySet }) {
             group={g}
             statusMap={statusMap}
             onSetStatus={handleSetStatus}
+            onShareMilestone={group =>
+              openLinkedInComposer(
+                buildMilestonePost(roadmap.title, group.label, {
+                  topicsInGroup: group.topics.length,
+                  overallPct,
+                })
+              )
+            }
           />
         ))}
       </div>

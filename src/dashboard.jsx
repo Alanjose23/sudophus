@@ -1,83 +1,32 @@
 import { useState, useEffect, useMemo } from "react"
 import { db } from "./firebase"
-import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore"
+import { doc, getDoc, setDoc, collection, query, where, getDocs, serverTimestamp } from "firebase/firestore"
+import { normalizeLinkedInUrl } from "./linkedin"
+import { calcStreak } from "./utils"
 import { ROADMAPS } from "./roadmapData"
-import { PROJECT_SUGGESTIONS } from "./projectSuggestions"
+import { PROJECT_SUGGESTIONS, DIFFICULTY_TIERS, TIER_LABELS } from "./projectSuggestions"
+import {
+  PathwayIcon, LinkedInIcon, NotebookPen, Rocket, Map, BookOpen, Lightbulb, RefreshCw,
+} from "./icons.jsx"
 import "./App.css"
 
 const QUICK_LINKS = [
-  { screen: "journal",  icon: "📓", label: "Journal",      desc: "Write & reflect"         },
-  { screen: "project",  icon: "🚀", label: "Projects",     desc: "Track your builds"        },
-  { screen: "roadmap",  icon: "🗺️", label: "Learning Kit", desc: "Your pathway progress"    },
-  { screen: "about",    icon: "🐍", label: "About",        desc: "The Sudophus story"       },
+  { screen: "journal",  Icon: NotebookPen, label: "Journal",      desc: "Write & reflect"      },
+  { screen: "project",  Icon: Rocket,      label: "Projects",     desc: "Track your builds"     },
+  { screen: "roadmap",  Icon: Map,         label: "Learning Kit", desc: "Your pathway progress" },
+  { screen: "about",    Icon: BookOpen,    label: "About",        desc: "The Sudophus story"    },
 ]
 
-const TIERS = [
-  {
-    id:       "free",
-    name:     "Free",
-    monthly:  0,
-    annual:   0,
-    desc:     "Start your journey",
-    features: [
-      "Unlimited journal entries",
-      "Up to 5 projects",
-      "1 learning pathway",
-      "Project suggestions",
-    ],
-    cta:     "Current plan",
-    current: true,
-  },
-  {
-    id:      "builder",
-    name:    "Builder",
-    monthly: 7,
-    annual:  5,
-    desc:    "Serious builders",
-    popular: true,
-    features: [
-      "Everything in Free",
-      "Unlimited projects",
-      "All learning pathways",
-      "Priority suggestions",
-      "Export journal (CSV)",
-    ],
-    cta: "Upgrade",
-  },
-  {
-    id:      "master",
-    name:    "Master",
-    monthly: 18,
-    annual:  13,
-    desc:    "Professionals & teams",
-    features: [
-      "Everything in Builder",
-      "Team workspaces",
-      "Mentor review queue",
-      "Custom roadmaps",
-      "API access",
-    ],
-    cta: "Go Master",
-  },
-]
+const dayKey = d =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`
 
-const SHOWN_SUGG = 3
-
-function shuffleArr(arr) {
-  const a = [...arr]
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]]
-  }
-  return a
-}
 
 function AboutTab({ stats, totalTopics, donePct, roadmap, onNavigate }) {
   const features = [
-    { icon: "📓", label: "Daily Journal",      desc: "Log reflections, bugs fixed, and wins" },
-    { icon: "🚀", label: "Project Tracker",    desc: "Showcase builds, track progress targets" },
-    { icon: "🗺️", label: "Learning Pathways", desc: "Curated roadmaps with skill checkpoints" },
-    { icon: "💡", label: "Smart Suggestions",  desc: "Project ideas matched to your pathway" },
+    { Icon: NotebookPen, label: "Daily Journal",      desc: "Log reflections, bugs fixed, and wins" },
+    { Icon: Rocket,      label: "Project Tracker",    desc: "Showcase builds, track progress targets" },
+    { Icon: Map,         label: "Learning Pathways",  desc: "Curated roadmaps with skill checkpoints" },
+    { Icon: Lightbulb,   label: "Smart Suggestions",  desc: "Project ideas matched to your pathway" },
   ]
   return (
     <div className="dash-tab-body">
@@ -108,7 +57,7 @@ function AboutTab({ stats, totalTopics, donePct, roadmap, onNavigate }) {
       <div className="dash-about-features">
         {features.map(f => (
           <div key={f.label} className="dash-about-feature">
-            <span className="dash-about-feature-icon">{f.icon}</span>
+            <span className="dash-about-feature-icon"><f.Icon size={18} strokeWidth={1.75} aria-hidden="true" /></span>
             <div>
               <div className="dash-about-feature-name">{f.label}</div>
               <div className="dash-about-feature-desc">{f.desc}</div>
@@ -120,69 +69,19 @@ function AboutTab({ stats, totalTopics, donePct, roadmap, onNavigate }) {
   )
 }
 
-function PricingTab() {
-  const [annual, setAnnual] = useState(false)
-  return (
-    <div className="dash-tab-body">
-      <div className="dash-pricing-header">
-        <h3 className="dash-section-title" style={{ margin: 0 }}>Plans &amp; Pricing</h3>
-        <div className="dash-pricing-toggle" onClick={() => setAnnual(a => !a)} role="button" tabIndex={0} aria-label="Toggle billing period">
-          <span className={!annual ? "dash-toggle-active" : ""}>Monthly</span>
-          <div className={`dash-toggle-pill${annual ? " on" : ""}`}>
-            <div className="dash-toggle-knob" />
-          </div>
-          <span className={annual ? "dash-toggle-active" : ""}>Annual <span className="dash-toggle-save">−30%</span></span>
-        </div>
-      </div>
-      <div className="dash-pricing-grid">
-        {TIERS.map(tier => (
-          <div key={tier.id} className={`dash-tier${tier.popular ? " dash-tier--popular" : ""}`}>
-            {tier.popular && <div className="dash-tier-badge">Most Popular</div>}
-            <div className="dash-tier-name">{tier.name}</div>
-            <div className="dash-tier-price">
-              {tier.monthly === 0
-                ? <span className="dash-tier-amount">Free</span>
-                : <>
-                    <span className="dash-tier-amount">${annual ? tier.annual : tier.monthly}</span>
-                    <span className="dash-tier-period">/ mo</span>
-                  </>
-              }
-            </div>
-            <div className="dash-tier-desc">{tier.desc}</div>
-            <ul className="dash-tier-features">
-              {tier.features.map(f => (
-                <li key={f} className="dash-tier-feature">
-                  <span className="dash-tier-check">✓</span>{f}
-                </li>
-              ))}
-            </ul>
-            <button
-              className={`dash-tier-cta${tier.current ? " dash-tier-cta--current" : " dash-tier-cta--soon"}`}
-              disabled
-              title={tier.current ? "Your current plan" : "Coming soon"}
-            >
-              {tier.current ? tier.cta : "Coming soon"}
-            </button>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
-
 function SuggestionsTab({ pathway }) {
   const pool = useMemo(() => pathway ? (PROJECT_SUGGESTIONS[pathway] ?? []) : [], [pathway])
-  const [shuffleKey, setShuffleKey] = useState(0)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const shown = useMemo(() => shuffleArr(pool).slice(0, SHOWN_SUGG), [pool, shuffleKey])
+  const [tier, setTier] = useState(DIFFICULTY_TIERS[0])
+  const shown = useMemo(() => pool.filter(s => s.difficulty === tier), [pool, tier])
 
-  const shuffle = () => setShuffleKey(k => k + 1)
+  const cycleTier = () =>
+    setTier(t => DIFFICULTY_TIERS[(DIFFICULTY_TIERS.indexOf(t) + 1) % DIFFICULTY_TIERS.length])
 
   if (!pathway) {
     return (
       <div className="dash-tab-body">
         <div className="dash-sugg-empty">
-          <div className="dash-sugg-empty-icon">🗺️</div>
+          <div className="dash-sugg-empty-icon"><Map size={28} strokeWidth={1.5} aria-hidden="true" /></div>
           <p>Set a learning pathway to unlock project suggestions.</p>
         </div>
       </div>
@@ -193,7 +92,7 @@ function SuggestionsTab({ pathway }) {
     return (
       <div className="dash-tab-body">
         <div className="dash-sugg-empty">
-          <div className="dash-sugg-empty-icon">💡</div>
+          <div className="dash-sugg-empty-icon"><Lightbulb size={28} strokeWidth={1.5} aria-hidden="true" /></div>
           <p>No suggestions yet for this pathway.</p>
         </div>
       </div>
@@ -207,18 +106,33 @@ function SuggestionsTab({ pathway }) {
           <h3 className="dash-section-title" style={{ margin: "0 0 0.2rem" }}>Project Suggestions</h3>
           <p className="dash-section-sub" style={{ margin: 0 }}>Curated ideas for your active pathway.</p>
         </div>
-        <button className="btn-ghost-sm" onClick={shuffle}>↻ Shuffle</button>
+        <button className="btn-ghost-sm btn-icon-row" onClick={cycleTier}>
+          <RefreshCw size={12} strokeWidth={1.75} aria-hidden="true" /> Next tier
+        </button>
+      </div>
+      <div className="tier-tabs" role="tablist" aria-label="Suggestion difficulty">
+        {DIFFICULTY_TIERS.map(t => (
+          <button
+            key={t}
+            role="tab"
+            aria-selected={tier === t}
+            className={`tier-tab${tier === t ? " active" : ""}`}
+            onClick={() => setTier(t)}
+          >
+            {TIER_LABELS[t]}
+          </button>
+        ))}
       </div>
       <div className="dash-sugg-list">
-        {shown.map((s, i) => (
-          <a key={i} className="dash-sugg-item" href={s.url} target="_blank" rel="noopener noreferrer">
+        {shown.map(s => (
+          <a key={s.title} className="dash-sugg-item" href={s.source?.url} target="_blank" rel="noopener noreferrer">
             <div className="dash-sugg-item-top">
               <span className="dash-sugg-title">{s.title}</span>
-              <span className={`dash-sugg-diff dash-sugg-diff--${(s.difficulty ?? "beginner").toLowerCase()}`}>
-                {s.difficulty ?? "Beginner"}
+              <span className={`dash-sugg-diff dash-sugg-diff--${s.difficulty}`}>
+                {TIER_LABELS[s.difficulty]}
               </span>
             </div>
-            {s.desc && <p className="dash-sugg-desc">{s.desc}</p>}
+            {s.description && <p className="dash-sugg-desc">{s.description}</p>}
             {s.source && <span className="dash-sugg-source">{s.source.name} ↗</span>}
           </a>
         ))}
@@ -227,9 +141,169 @@ function SuggestionsTab({ pathway }) {
   )
 }
 
+function LinkedInCard({ user, linkedin, onChange }) {
+  const [url, setUrl] = useState("")
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState("")
+
+  const connect = async () => {
+    const normalized = normalizeLinkedInUrl(url)
+    if (!normalized) {
+      setError("Enter a valid LinkedIn profile URL, e.g. linkedin.com/in/your-name")
+      return
+    }
+    setSaving(true)
+    setError("")
+    try {
+      const data = { profileUrl: normalized, connectedAt: serverTimestamp() }
+      await setDoc(doc(db, "users", user.uid), { linkedin: data }, { merge: true })
+      onChange({ profileUrl: normalized })
+      setUrl("")
+    } catch {
+      setError("Could not save your LinkedIn profile. Try again.")
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const disconnect = async () => {
+    setSaving(true)
+    try {
+      await setDoc(doc(db, "users", user.uid), { linkedin: null }, { merge: true })
+      onChange(null)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="dash-linkedin">
+      <div className="dash-linkedin-head">
+        <span className="dash-linkedin-icon"><LinkedInIcon size={16} /></span>
+        <span className="dash-linkedin-title">LinkedIn</span>
+        {linkedin?.profileUrl && <span className="dash-linkedin-chip">Connected</span>}
+      </div>
+      {linkedin?.profileUrl ? (
+        <div className="dash-linkedin-row">
+          <a
+            className="dash-linkedin-url"
+            href={linkedin.profileUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            {linkedin.profileUrl.replace("https://www.", "")}
+          </a>
+          <button className="btn-ghost-sm" onClick={disconnect} disabled={saving}>
+            Disconnect
+          </button>
+        </div>
+      ) : (
+        <>
+          <p className="dash-linkedin-sub">
+            Connect your profile to share project updates with your network.
+            Posting opens LinkedIn's composer with the post pre-written for you.
+          </p>
+          <div className="dash-linkedin-row">
+            <input
+              className="form-input"
+              value={url}
+              onChange={e => setUrl(e.target.value)}
+              onKeyDown={e => { if (e.key === "Enter") connect() }}
+              placeholder="linkedin.com/in/your-name"
+              aria-label="LinkedIn profile URL"
+            />
+            <button className="btn-primary dash-linkedin-btn" onClick={connect} disabled={saving}>
+              {saving ? "Saving…" : "Connect"}
+            </button>
+          </div>
+          {error && <p className="dash-linkedin-error">{error}</p>}
+        </>
+      )}
+    </div>
+  )
+}
+
+function Sparkline({ points, color = "var(--primary)" }) {
+  if (!points?.length) return null
+  const max = Math.max(...points, 1)
+  const w = 100
+  const h = 28
+  const step = w / (points.length - 1 || 1)
+  const coords = points
+    .map((v, i) => `${(i * step).toFixed(1)},${(h - 3 - (v / max) * (h - 6)).toFixed(1)}`)
+    .join(" ")
+  return (
+    <svg className="stat-tile-spark" viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" aria-hidden="true">
+      <polyline points={coords} fill="none" stroke={color} strokeWidth="1.5" vectorEffect="non-scaling-stroke" />
+    </svg>
+  )
+}
+
+function StatTile({ accent, label, value, sub, spark, onClick, title }) {
+  return (
+    <div
+      className="stat-tile"
+      style={{ "--tile-accent": accent }}
+      onClick={onClick}
+      role="button"
+      tabIndex={0}
+      title={title}
+    >
+      <span className="stat-tile-eyebrow">{label}</span>
+      <span className="stat-tile-value">{value}</span>
+      {sub && <span className="stat-tile-sub">{sub}</span>}
+      {spark && <Sparkline points={spark} color={accent} />}
+    </div>
+  )
+}
+
+const HEATMAP_WEEKS = 15
+
+function ActivityHeatmap({ countsByDay }) {
+  const cells = useMemo(() => {
+    const today = new Date()
+    const start = new Date(today.getFullYear(), today.getMonth(), today.getDate())
+    start.setDate(start.getDate() - start.getDay() - (HEATMAP_WEEKS - 1) * 7)
+    const out = []
+    for (const d = new Date(start); d <= today; d.setDate(d.getDate() + 1)) {
+      out.push(new Date(d))
+    }
+    return out
+  }, [])
+
+  return (
+    <div className="dash-heatmap-wrap">
+      <div className="dash-quick-label">Activity · last {HEATMAP_WEEKS} weeks</div>
+      <div className="dash-heatmap" aria-label="Daily journal and session activity">
+        {cells.map(d => {
+          const k = dayKey(d)
+          const count = countsByDay[k] ?? 0
+          const date = d.toLocaleDateString("en-US", { month: "short", day: "numeric" })
+          return (
+            <span
+              key={k}
+              className={`heat-cell heat-${Math.min(count, 3)}`}
+              title={`${count} ${count === 1 ? "entry" : "entries"} · ${date}`}
+            />
+          )
+        })}
+      </div>
+      <div className="dash-heatmap-legend">
+        <span>Less</span>
+        <span className="heat-cell heat-0" />
+        <span className="heat-cell heat-1" />
+        <span className="heat-cell heat-2" />
+        <span className="heat-cell heat-3" />
+        <span>More</span>
+      </div>
+    </div>
+  )
+}
+
 function Dashboard({ user, onNavigate }) {
   const [userData, setUserData] = useState(null)
   const [stats, setStats] = useState({ entries: 0, projects: 0 })
+  const [entryDates, setEntryDates] = useState([])
   const [activeTab, setActiveTab] = useState("about")
 
   useEffect(() => {
@@ -241,9 +315,38 @@ function Dashboard({ user, onNavigate }) {
       ])
       setUserData(userSnap.data() ?? {})
       setStats({ entries: entriesSnap.size, projects: projSnap.size })
+      setEntryDates(
+        entriesSnap.docs
+          .map(d => d.data().createdAt?.toDate())
+          .filter(Boolean)
+      )
     }
     load()
   }, [user.uid])
+
+  const countsByDay = useMemo(() => {
+    const m = {}
+    for (const d of entryDates) {
+      const k = dayKey(d)
+      m[k] = (m[k] ?? 0) + 1
+    }
+    return m
+  }, [entryDates])
+
+  const streak = useMemo(
+    () => calcStreak(entryDates.map(d => ({ createdAt: d }))),
+    [entryDates]
+  )
+
+  const last14 = useMemo(() => {
+    const out = []
+    const today = new Date()
+    for (let i = 13; i >= 0; i--) {
+      const d = new Date(today.getFullYear(), today.getMonth(), today.getDate() - i)
+      out.push(countsByDay[dayKey(d)] ?? 0)
+    }
+    return out
+  }, [countsByDay])
 
   const pathway     = userData?.activePathway
   const roadmap     = pathway ? ROADMAPS[pathway] : null
@@ -261,7 +364,6 @@ function Dashboard({ user, onNavigate }) {
 
   const tabs = [
     { id: "about",       label: "About"       },
-    { id: "pricing",     label: "Pricing"     },
     { id: "suggestions", label: "Suggestions" },
   ]
 
@@ -281,36 +383,49 @@ function Dashboard({ user, onNavigate }) {
         </div>
       </div>
 
-      {/* ── Stats row ── */}
-      <div className="dash-stats">
-        <div className="dash-stat" onClick={() => onNavigate?.("journal")} role="button" tabIndex={0} title="Go to Journal">
-          <div className="dash-stat-value">{stats.entries}</div>
-          <div className="dash-stat-label">Journal Entries</div>
-        </div>
-        <div className="dash-stat" onClick={() => onNavigate?.("project")} role="button" tabIndex={0} title="Go to Projects">
-          <div className="dash-stat-value">{stats.projects}</div>
-          <div className="dash-stat-label">Projects</div>
-        </div>
-        <div className="dash-stat" onClick={() => onNavigate?.("roadmap")} role="button" tabIndex={0} title="Go to Learning Kit">
-          {roadmap ? (
-            <>
-              <div className="dash-stat-value">{donePct}%</div>
-              <div className="dash-stat-label">{roadmap.icon} {roadmap.title}</div>
-            </>
-          ) : (
-            <>
-              <div className="dash-stat-value">—</div>
-              <div className="dash-stat-label">No pathway set</div>
-            </>
-          )}
-        </div>
+      {/* ── Stat tiles ── */}
+      <div className="dash-tiles">
+        <StatTile
+          accent="var(--info)"
+          label="Entries"
+          value={stats.entries}
+          spark={last14}
+          onClick={() => onNavigate?.("journal")}
+          title="Go to Journal"
+        />
+        <StatTile
+          accent="var(--primary)"
+          label="Projects"
+          value={stats.projects}
+          sub="tracked builds"
+          onClick={() => onNavigate?.("project")}
+          title="Go to Projects"
+        />
+        <StatTile
+          accent="var(--success)"
+          label="Day streak"
+          value={streak}
+          sub={streak > 0 ? "keep it alive" : "log today to start"}
+          onClick={() => onNavigate?.("journal")}
+          title="Days in a row with at least one entry"
+        />
+        <StatTile
+          accent="var(--tertiary)"
+          label="Pathway"
+          value={roadmap ? `${donePct}%` : "—"}
+          sub={roadmap ? roadmap.title : "No pathway set"}
+          onClick={() => onNavigate?.("roadmap")}
+          title="Go to Learning Kit"
+        />
       </div>
 
       {/* ── Pathway progress bar ── */}
       {roadmap && (
         <div className="dash-pathway">
           <div className="dash-pathway-header">
-            <span className="dash-pathway-title">{roadmap.icon} {roadmap.title} Pathway</span>
+            <span className="dash-pathway-title">
+              <PathwayIcon id={pathway} size={15} /> {roadmap.title} Pathway
+            </span>
             <span className="dash-pathway-pct">{doneCount} / {totalTopics} mastered</span>
           </div>
           <div className="dash-pathway-bar">
@@ -318,6 +433,16 @@ function Dashboard({ user, onNavigate }) {
           </div>
         </div>
       )}
+
+      {/* ── Activity heatmap ── */}
+      <ActivityHeatmap countsByDay={countsByDay} />
+
+      {/* ── LinkedIn ── */}
+      <LinkedInCard
+        user={user}
+        linkedin={userData?.linkedin}
+        onChange={linkedin => setUserData(d => ({ ...d, linkedin }))}
+      />
 
       {/* ── Quick Access ── */}
       <div className="dash-quick-label">Quick Access</div>
@@ -328,7 +453,7 @@ function Dashboard({ user, onNavigate }) {
             className="dash-quick-tile"
             onClick={() => onNavigate?.(link.screen)}
           >
-            <span className="dash-quick-icon">{link.icon}</span>
+            <span className="dash-quick-icon"><link.Icon size={22} strokeWidth={1.5} aria-hidden="true" /></span>
             <span className="dash-quick-name">{link.label}</span>
             <span className="dash-quick-desc">{link.desc}</span>
           </button>
@@ -360,7 +485,6 @@ function Dashboard({ user, onNavigate }) {
           onNavigate={onNavigate}
         />
       )}
-      {activeTab === "pricing"     && <PricingTab />}
       {activeTab === "suggestions" && <SuggestionsTab pathway={pathway} />}
     </div>
   )

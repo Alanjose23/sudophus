@@ -6,7 +6,8 @@ import {
   deleteDoc, doc, updateDoc, onSnapshot,
 } from "firebase/firestore"
 import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from "firebase/storage"
-import { timeAgo, formatFull } from "./utils"
+import { timeAgo, formatFull, extractTags } from "./utils"
+import { Mic, Pencil, Trash2, Download, Square } from "lucide-react"
 
 const MAX_REC_SECS = 300 // 5-minute cap
 const canRecord    =
@@ -24,6 +25,7 @@ function Journal({ user }) {
   const [loading, setLoading]   = useState(true)
   const [loadError, setLoadError] = useState(null)
   const [search, setSearch]     = useState("")
+  const [activeTag, setActiveTag] = useState(null)
   const [editingId, setEditingId] = useState(null)
   const [editText, setEditText] = useState("")
 
@@ -205,9 +207,11 @@ function Journal({ user }) {
     URL.revokeObjectURL(url)
   }
 
-  const filtered = search.trim()
-    ? entries.filter(e => e.text.toLowerCase().includes(search.toLowerCase()))
-    : entries
+  const allTags = [...new Set(entries.flatMap(e => extractTags(e.text)))].sort()
+
+  const filtered = entries
+    .filter(e => !search.trim() || e.text.toLowerCase().includes(search.toLowerCase()))
+    .filter(e => !activeTag || extractTags(e.text).includes(activeTag))
 
   const isBusy  = saving || uploadingAudio
   const canSave = !isBusy && (text.trim().length > 0 || audioBlob !== null)
@@ -225,7 +229,7 @@ function Journal({ user }) {
 
       <textarea
         className="journal-textarea"
-        placeholder="What did you work on today? What did you learn?"
+        placeholder="What did you work on today? What did you learn? Add #tags to organise entries."
         rows={10}
         value={text}
         onChange={e => setText(e.target.value)}
@@ -254,14 +258,14 @@ function Journal({ user }) {
               <span className="rec-timer" aria-live="polite">{fmtTime(recSecs)}</span>
               <span className="rec-limit">/ {fmtTime(MAX_REC_SECS)}</span>
               <button className="rec-stop-btn" onClick={stopRecording} aria-label="Stop recording">
-                ■ Stop
+                <Square size={9} strokeWidth={1.75} fill="currentColor" aria-hidden="true" /> Stop
               </button>
             </div>
           )}
 
           {recState === "preview" && (
             <div className="rec-preview">
-              <span className="rec-preview-icon" aria-hidden="true">🎙</span>
+              <span className="rec-preview-icon" aria-hidden="true"><Mic size={15} strokeWidth={1.75} /></span>
               <audio controls src={previewUrl} className="rec-preview-audio" />
               <button className="rec-discard-btn" onClick={discardRecording} title="Discard recording" aria-label="Discard recording">
                 ✕
@@ -286,6 +290,21 @@ function Journal({ user }) {
         </button>
       </div>
 
+      {allTags.length > 0 && (
+        <div className="journal-tags" role="group" aria-label="Filter by tag">
+          {allTags.map(t => (
+            <button
+              key={t}
+              className={`journal-tag${activeTag === t ? " active" : ""}`}
+              onClick={() => setActiveTag(prev => prev === t ? null : t)}
+              title={activeTag === t ? "Clear tag filter" : `Show entries tagged ${t}`}
+            >
+              {t}
+            </button>
+          ))}
+        </div>
+      )}
+
       {entries.length > 0 && (
         <div className="journal-toolbar">
           <input
@@ -295,8 +314,8 @@ function Journal({ user }) {
             value={search}
             onChange={e => setSearch(e.target.value)}
           />
-          <button className="btn-ghost-sm" onClick={exportCSV} title="Download all entries as CSV">
-            ↓ Export CSV
+          <button className="btn-ghost-sm btn-icon-row" onClick={exportCSV} title="Download all entries as CSV">
+            <Download size={12} strokeWidth={1.75} aria-hidden="true" /> Export CSV
           </button>
         </div>
       )}
@@ -304,8 +323,8 @@ function Journal({ user }) {
       <div className="entries-list">
         {!loading && entries.length > 0 && (
           <h4 className="entries-heading">
-            {search.trim()
-              ? `${filtered.length} result${filtered.length !== 1 ? "s" : ""} for "${search}"`
+            {search.trim() || activeTag
+              ? `${filtered.length} result${filtered.length !== 1 ? "s" : ""}${search.trim() ? ` for "${search}"` : ""}${activeTag ? ` tagged ${activeTag}` : ""}`
               : `All entries (${entries.length})`}
           </h4>
         )}
@@ -356,7 +375,7 @@ function Journal({ user }) {
                       <span className="entry-time-relative" title={formatFull(entry.createdAt)}>
                         {timeAgo(entry.createdAt)}
                       </span>
-                      {entry.audioUrl && <span className="entry-audio-chip">🎙 voice</span>}
+                      {entry.audioUrl && <span className="entry-audio-chip"><Mic size={10} strokeWidth={1.75} aria-hidden="true" /> voice</span>}
                       <span className="entry-time-absolute">{formatFull(entry.createdAt)}</span>
                     </div>
                   )}
@@ -365,17 +384,17 @@ function Journal({ user }) {
               {editingId !== entry.id && (
                 <div className="entry-actions">
                   <button className="entry-edit-btn" onClick={() => startEdit(entry)}
-                    title="Edit entry" aria-label="Edit entry">✎</button>
+                    title="Edit entry" aria-label="Edit entry"><Pencil size={14} strokeWidth={1.75} /></button>
                   <button className="entry-delete" onClick={() => deleteEntry(entry.id)}
-                    title="Delete entry" aria-label="Delete entry">×</button>
+                    title="Delete entry" aria-label="Delete entry"><Trash2 size={14} strokeWidth={1.75} /></button>
                 </div>
               )}
             </div>
           ))
         )}
 
-        {!loading && search.trim() && filtered.length === 0 && (
-          <p className="entries-no-results">No entries match your search.</p>
+        {!loading && (search.trim() || activeTag) && filtered.length === 0 && (
+          <p className="entries-no-results">No entries match your filters.</p>
         )}
       </div>
     </div>
